@@ -142,8 +142,12 @@ cd ../frontend && npm ci
 npm run lint && npm run typecheck && npx vitest run && npm run build
 ```
 
+**Datos de ejemplo:**
+- **Seed:** `docker compose exec api python -m app.scripts.seed` (con `-f compose.yaml` en el modo demo) carga una cartera mínima de 3 posiciones (`AAPL` y `NVDA` abiertas, `MSFT` cerrada). Si ya hay una cartera vigente no hace nada, para no sustituirla; para volver a cargarlo hay que borrar el volumen con `down -v`. Desde BE-08 cargará `cartera-ejemplo.xlsx`.
+- **XLSX de prueba manual:** se dejan en `datos-locales/`, en la raíz del repositorio, que git ignora. Desde BE-01b se pueden importar con Swagger o curl y desde FE-01 con el control de carga.
+- **Tests de integración:** arrancan su propio PostgreSQL (`postgres:16.16`) con Testcontainers, así que solo necesitan Docker; no usan la BD de compose.
+
 **Pendiente en tickets posteriores:**
-- **Seed** (`docker compose exec api python -m app.scripts.seed`): llega con DB-01, con un fixture mínimo, y desde BE-08 carga `cartera-ejemplo.xlsx`.
 - **Imágenes publicadas:** `docker compose -f compose.yaml pull` con las imágenes de GHCR llega con REL-01.
 
 ---
@@ -360,6 +364,7 @@ Contrato del puerto `ProveedorPrecios`:
 |   +-- changes/<change>/       # proposal, specs (deltas), design, tasks
 |       +-- archive/            # changes aplicados; su design.md hace de ADR
 +-- compose.yaml  compose.override.yaml  .env.example  .gitignore  .gitleaksignore
++-- datos-locales/              # XLSX de prueba manual; ignorado por git, nunca se versiona
 +-- CLAUDE.md  readme.md  prompts.md
 ```
 

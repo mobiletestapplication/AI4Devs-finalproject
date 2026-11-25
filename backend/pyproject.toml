@@ -23,6 +23,7 @@ dev = [
     "import-linter>=2.1",
     "pip-audit>=2.7",
     "bandit>=1.8",
+    "testcontainers[postgres]>=4.9",
 ]
 
 [tool.uv]

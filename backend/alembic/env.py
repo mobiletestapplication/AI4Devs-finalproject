@@ -6,14 +6,16 @@ from sqlalchemy import create_engine, pool
 
 from alembic import context
 from app.infrastructure.config import obtener_ajustes
+from app.infrastructure.db.modelos import Base
 
 config = context.config
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# DB-01 sustituye este valor por los metadatos de los modelos ORM.
-target_metadata = None
+# Metadatos de los modelos ORM: autogenerate y `alembic check` comparan con ellos.
+target_metadata = Base.metadata
+OPCIONES_DE_COMPARACION = {"compare_type": True, "compare_server_default": True}
 
 
 def _url() -> str:
@@ -27,6 +29,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        **OPCIONES_DE_COMPARACION,
     )
     with context.begin_transaction():
         context.run_migrations()
@@ -36,7 +39,9 @@ def run_migrations_online() -> None:
     """Aplica las migraciones contra la BD de DATABASE_URL."""
     motor = create_engine(_url(), poolclass=pool.NullPool)
     with motor.connect() as conexion:
-        context.configure(connection=conexion, target_metadata=target_metadata)
+        context.configure(
+            connection=conexion, target_metadata=target_metadata, **OPCIONES_DE_COMPARACION
+        )
         with context.begin_transaction():
             context.run_migrations()
 

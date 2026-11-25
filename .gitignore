@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# XLSX de prueba manual (BE-01b, FE-01): nunca se versionan (design D8 de db-01-esquema)
+datos-locales/
+
 # Python / uv
 __pycache__/
 *.py[cod]
