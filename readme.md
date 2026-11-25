@@ -104,7 +104,7 @@ Dashboard de una sola página con secciones (wireframes a generar en la Entrega 
 1. **Carga y Watchlist (F1)** — sin cartera, mensaje de bienvenida y control para seleccionar o arrastrar el `.xlsx`. Con cartera, aviso de sustitución antes de importar otro fichero, que solo se importa si se confirma. Durante la carga, indicador de progreso y después mensaje de éxito con el número de posiciones importadas. Si hay errores de validación, lista con número de fila y motivo, y la Watchlist sigue mostrando la cartera anterior. Tabla ordenable por cualquier columna y filtrable (abiertas / cerradas / todas): Ticker, Estado, Cantidad, Precio de compra, Precio de referencia, Rendimiento USD, Rendimiento %, Plusvalía (etiqueta `Short-Term`/`Long-Term`). Rendimientos en verde con `+` o en rojo con `−`; `—` con el motivo al pasar el cursor si no hay cotización.
 2. **Rentabilidad (F2)** — TWR acumulada y anualizada (o "No aplicable (periodo inferior a un año)") en porcentaje con dos decimales, con las fechas de inicio y fin y una ayuda sobre qué mide la TWR; selector Mensual/Semanal con gráfico de barras (verde/rojo, marca en periodos parciales) y tabla. Tras importar una nueva cartera, el panel se recalcula sin recargar la página.
 3. **Estrategias (F3)** — selector de estrategia con sus parámetros y descripción de reglas (un valor no válido muestra un error junto al campo y no se recalculan las señales hasta corregirlo); tabla de señales por ticker (Compra verde, Venta roja, Mantener gris, "Sin datos suficientes" atenuada) con intensidad, valor del indicador y fecha desde la que se mantiene; al pulsar un ticker, gráfico del precio del último año con el indicador en un panel inferior, junto con los umbrales o las medias de la estrategia, y marcas de Compra y Venta en los cambios de señal.
-4. **Backtesting (F4)** — botón "Ejecutar backtest" con indicador de progreso, deshabilitado hasta que termina el cálculo; tabla comparativa (cartera real y cada estrategia) con TWR acumulada y anualizada, máximo drawdown, % de aciertos y factor de beneficio, ordenada según la comparativa y con la mejor fila destacada; curvas base 100 superpuestas que se pueden ocultar desde la leyenda; propuestas de mejora en lenguaje claro y operaciones simuladas de la estrategia elegida. Si fallan los datos de mercado, mensaje que explica el problema con la opción de reintentar.
+4. **Backtesting (F4)** — botón "Ejecutar backtest" con indicador de progreso, deshabilitado hasta que termina el cálculo; tabla comparativa (cartera real y cada estrategia) con TWR acumulada y anualizada, máximo drawdown, % de aciertos y factor de beneficio, ordenada según la comparativa y con la mejor fila destacada; curvas base 100 superpuestas que se pueden ocultar desde la leyenda; propuestas de mejora en lenguaje claro y operaciones simuladas de la estrategia elegida. Si fallan los datos de mercado, mensaje que explica el problema con la opción de reintentar; si se supera el límite de backtests por minuto (`429`), mensaje con los segundos que hay que esperar antes de reintentar.
 5. **Operaciones recomendadas (F5)** — lista numerada con ticker, etiqueta Comprar (verde) o Vender (rojo), intensidad como barra, precio de referencia, motivo y, en compras, stop-loss y objetivo; fecha de la sesión usada. Se recalcula al cambiar la estrategia o sus parámetros, indicando la estrategia aplicada. Con menos de 10 operaciones, mensaje que explica que el resto de tickers tiene señal Mantener o sin datos suficientes; sin ninguna, mensaje de que no hay operaciones recomendadas para esa estrategia hoy. Icono de aviso fiscal en ventas que, al pasar el cursor o pulsarlo, muestra la fecha a partir de la cual la posición pasaría a Long-Term.
 
 Avisos permanentes: "Las señales son orientativas y no constituyen asesoramiento financiero" (F3 y F5) y "Las rentabilidades pasadas no garantizan rentabilidades futuras" (F4).
@@ -244,7 +244,7 @@ flowchart LR
 | Dominio · estrategias | Python | Catálogo, validación de parámetros, reglas, intensidad y fecha de inicio de la señal |
 | Dominio · backtest | pandas | Simulación sin sesgo de anticipación, métricas, comparativa y mejoras |
 | Dominio · recomendaciones | Python · `Decimal` | Hasta 10 operaciones, stop-loss y objetivo por ATR, aviso fiscal |
-| Adaptador XLSX | openpyxl · defusedxml | Seguridad del fichero, parseo, cabeceras flexibles y validación por fila (cantidad > 0, fechas no futuras, venta ≥ compra, venta completa; precios > 0 como *control de diseño, pendiente de spec*) |
+| Adaptador XLSX | openpyxl · defusedxml | Seguridad del fichero en el orden de la sección 2.5 (tamaño en streaming, firma, índice ZIP, content types sin macros, objetos, vínculos ni DOCTYPE), parseo `read_only` + `data_only` con ≤ 10.000 filas y ≤ 10 s, cabeceras flexibles y validación por fila (ticker con el patrón `^[A-Z.\-]{1,10}$`, cantidad > 0, precios > 0, fechas no futuras, venta ≥ compra, venta completa) |
 | Adaptador proveedor de precios | yfinance (`auto_adjust=False`) · proveedor de ficheros | OHLC y splits; errores clasificados, traducción de símbolos y conversión a `Decimal` |
 | Adaptador indicadores | TA-Lib ≥ 0.6.5 | RSI, SMA y ATR de Wilder, y los indicadores futuros |
 | Repositorios y caché | SQLAlchemy 2 · Alembic | Cartera vigente atómica, `PRECIO_DIARIO` y `COBERTURA_PRECIO` con upsert; migraciones |
@@ -450,23 +450,60 @@ Un fallo de cualquier job bloquea el merge. **Testcontainers**, en lugar de un s
 
 > Enumera y describe las prácticas de seguridad principales que se han implementado en el proyecto, añadiendo ejemplos si procede
 
-El vector de ataque principal es la **subida de ficheros**. Controles previstos:
+El vector de ataque principal es la **subida de un fichero XLSX**, y la aplicación no tiene autenticación. Mapa de amenazas con OWASP Top 10:2025 como referencia; cada rechazo con código HTTP está definido por un escenario de `importacion-cartera` o de `seguridad-api`:
 
-| Riesgo | Control |
-|---|---|
-| Fichero malicioso disfrazado | Validación de extensión **y** *magic bytes* (ZIP `PK\x03\x04`) y estructura OOXML; un fichero que no es XLSX → `415`. Rechazo de `.xlsm` y de cualquier `vbaProject.bin` *(control de diseño, pendiente de spec)* |
-| Zip bomb / DoS | Límite de tamaño (5 MB → `413`); nginx admite hasta 6 MB (`client_max_body_size 6m`) para que llegue al frontend el `413` en JSON de la API y no el de nginx en HTML. Límite de tamaño descomprimido y nº de entradas del ZIP, máx. 10 000 filas y timeout de parseo *(control de diseño, pendiente de spec)* |
-| XXE / entidades XML | `defusedxml` instalado (openpyxl lo usa automáticamente) |
-| Fórmulas / CSV injection | Lectura con `data_only=True`; valores que empiezan por `= + - @` se tratan como texto y se escapan en cualquier exportación |
-| Path traversal | Nunca se usa el nombre original para escribir en disco; procesamiento en memoria; se guarda solo el SHA-256 |
-| Validación de datos | Esquema estricto con Pydantic (tipos, cantidad > 0, tickers normalizados a mayúsculas, fechas no futuras, venta ≥ compra, venta completa) → `422`; todo o nada: un error rechaza el fichero sin tocar la cartera existente. Precios > 0 y patrón de ticker `^[A-Z.\-]{1,10}$` *(control de diseño, pendiente de spec)* |
-| Acceso sin autenticación | Cartera única sin identificadores en la API; solo ejecución local con los puertos publicados en `127.0.0.1`, para que nadie de la misma red pueda sustituir la cartera; un despliegue público requiere autenticación (backlog) |
-| Abuso de API | Rate limiting (`slowapi`); mismo origen vía nginx (la SPA y `/api` se sirven desde `localhost:8080`), así que CORS no hace falta y se mantiene restringido solo como defensa en profundidad; cabeceras de seguridad en nginx (CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy`) |
-| Secretos | Ninguno en el repo; `.env.example` con variables vacías; `gitleaks` en pre-commit y CI |
-| Dependencias | Dependabot + `pip-audit` + `npm audit`; SAST con Bandit/Semgrep |
-| Prompt injection (S1) | Los campos del XLSX nunca se envían como instrucciones al LLM; salida JSON validada contra esquema; el LLM no decide qué operaciones se recomiendan |
+| # | Amenaza | OWASP 2025 | Control | Rechazo |
+|---|---|---|---|---|
+| 1 | Fichero demasiado grande | A06 | Lectura en streaming con corte al superar 5 MB; nginx admite hasta 6 MB (`client_max_body_size 6m`) para que llegue al frontend el `413` en JSON de la API y no el de nginx en HTML | `413` |
+| 2 | Zip bomb | A06 · A10 | Inspección del índice ZIP antes de descomprimir: ≤ 50 MB descomprimidos, proporción ≤ 100:1, ≤ 1.000 entradas; ≤ 10.000 filas de datos y ≤ 10 s de análisis | `413` · `422` |
+| 3 | `.xlsm`, `.xlsb`, `.xls` OLE o cifrado | A08 | Firma `PK\x03\x04`; tipo de contenido principal de una hoja `.xlsx` normal en `[Content_Types].xml`; sin `vbaProject.bin`, `embeddings/`, `activeX/` ni `externalLinks/`; se ignoran la extensión y el `Content-Type` | `415` |
+| 4 | XXE y entidades XML | A05 · A02 | defusedxml, comprobado al arrancar; cualquier `<!DOCTYPE` → rechazo | `415` |
+| 5 | Inyección de fórmulas | A05 | `data_only=True`; ticker con el patrón `^[A-Z.\-]{1,10}$` tras normalizarlo a mayúsculas; precios > 0; una futura exportación CSV (S2) antepone `'` a `= + - @` | `422` |
+| 6 | XSS reflejado desde el contenido | A05 | Los errores repiten como mucho 20 caracteres de una celda, seguidos de `…`, y siempre como texto, nunca HTML; React sin `dangerouslySetInnerHTML`; CSP en nginx | — |
+| 7 | Path traversal | A01 | El nombre del fichero se ignora; procesamiento en memoria; solo se guarda el SHA-256; sin parámetros de ruta en el endpoint de ejemplo; nginx no lista directorios | — |
+| 8 | Petición desde otra web (CSRF) | A01 | `Origin` / `Sec-Fetch-Site` en los `POST`. Además, mismo origen vía nginx (la SPA y `/api` se sirven desde `localhost:8080`), así que CORS no hace falta y se mantiene restringido solo como defensa en profundidad | `403` |
+| 9 | DNS rebinding | A01 · A02 | Lista de hosts admitidos: `localhost` y `127.0.0.1` | `400` |
+| 10 | Abuso de operaciones caras | A06 | slowapi: 5 importaciones y 10 backtests por minuto, con `Retry-After`; las consultas no se limitan | `429` |
+| 11 | `422` por defecto de FastAPI | A10 | Manejador de validación que responde `400` en parámetros de ruta, de consulta y cuerpo JSON | `400` |
+| 12 | Fugas en los errores | A10 · A02 | `application/problem+json` con identificador de incidencia; la traza solo en el log; la importación falla cerrada (sin tocar la cartera) | `500` |
+| 13 | Secretos | A04 · A02 | Sin secretos en el repositorio; `.env.example` sin valores secretos; gitleaks en pre-commit y CI; secretos nunca en logs | — (CI) |
+| 14 | Dependencias y cadena de suministro | A03 · A08 | `uv.lock` con hashes y `uv sync --frozen`; `npm ci`; pip-audit, `npm audit`, Dependabot; imágenes y Actions fijadas por SHA; permisos mínimos; SBOM y procedencia en el release | — (CI) |
+| 15 | Prompt injection (S1) | A05 · A06 | El prompt solo recibe datos ya validados (ticker con el patrón, números, código de señal y umbrales), nunca texto libre del XLSX; prompt de sistema fijo y sin herramientas; salida validada con esquema JSON y longitud máxima, mostrada como texto; el LLM no cambia el orden, las cantidades ni los niveles; si falla o tarda más de 5 s, la operación se devuelve sin justificación | `200` sin justificación |
+| 16 | Sin autenticación | A07 | Aceptado: un usuario, solo ejecución local con los puertos publicados en `127.0.0.1`; desplegar en público exige añadir antes la autenticación | — |
+| 17 | Registro de ataques | A09 | Una línea de log estructurado por intento de importación: marca de tiempo, SHA-256 (si se llegó a leer), tamaño, resultado y código, motivo con el número de fila pero sin el valor de la celda, e identificador de incidencia en los `500`; el nombre original del fichero no se registra | — |
 
-*Control de diseño, pendiente de spec:* regla prevista en el diseño que todavía no forma parte de los requisitos observables de `importacion-cartera`. Por eso no se le asigna un código HTTP propio; se formalizará con un change de OpenSpec si se quiere garantizar con un código y un escenario.
+Cabeceras de seguridad en nginx: CSP, `X-Content-Type-Options: nosniff` y `Referrer-Policy`. La API no arranca si openpyxl no usa defusedxml, si la lista de hosts admitidos está vacía o si `LLM_API_KEY` aparece en algún valor que se vaya a registrar.
+
+**Orden de validación de la subida.** Cada paso es más caro que el anterior: lo que no requiere descomprimir (tamaño, firma, índice ZIP) va antes de abrir ningún XML, y el XML se examina en busca de `<!DOCTYPE` antes de pasarlo a openpyxl.
+
+```mermaid
+flowchart TD
+    A[POST /api/cartera/importacion] --> H{Host admitido?}
+    H -- no --> E400[400]
+    H -- sí --> O{Origin / Sec-Fetch-Site propio?}
+    O -- no --> E403[403]
+    O -- sí --> R{Límite 5/min?}
+    R -- superado --> E429[429 + Retry-After]
+    R -- ok --> S{Lectura en streaming ≤ 5 MB?}
+    S -- no --> E413a[413]
+    S -- sí --> M{Firma PK? no OLE?}
+    M -- no --> E415a[415]
+    M -- sí --> Z{Índice ZIP: ≤ 50 MB, ≤ 100:1, ≤ 1.000 entradas}
+    Z -- no --> E413b[413]
+    Z -- sí --> C{Content types .xlsx, sin macros, objetos ni vínculos, sin DOCTYPE}
+    C -- no --> E415b[415]
+    C -- sí --> P{Análisis read_only + data_only: ≤ 10.000 filas, ≤ 10 s, cabeceras y filas válidas}
+    P -- no --> E422[422 con errores por fila]
+    P -- sí --> T[Transacción: sustituir cartera] --> OK[201]
+```
+
+**Umbrales:**
+- **50 MB descomprimidos y 100:1:** un XLSX legítimo de 10.000 filas y 6 columnas ocupa del orden de 1-2 MB descomprimido, con proporciones de 5-15:1; los límites dejan un margen amplio sin admitir bombas.
+- **1.000 entradas:** un libro normal tiene menos de 20.
+- **10.000 filas:** una cartera personal tiene decenas o cientos; el límite acota la memoria y el tiempo de validación.
+- **10 s de análisis:** comprobación cooperativa del tiempo transcurrido en cada fila durante la iteración en `read_only`, sin hilos que no se puedan interrumpir.
+
+**Origen y host:** `TrustedHostMiddleware` con `localhost` y `127.0.0.1`. Un middleware propio para los `POST` acepta si `Origin` coincide con el origen de la aplicación (configurable por entorno; por defecto `http://localhost:8080` y `http://127.0.0.1:8080`, más el 5173 en el modo desarrollo); si falta `Origin`, rechaza cuando `Sec-Fetch-Site` es `cross-site` o `same-site`; si faltan las dos, acepta, porque es un cliente que no es un navegador (curl, tests). Se descartan los tokens CSRF, que requieren una sesión que la app no tiene.
 
 
 ### **2.6. Tests**
@@ -491,7 +528,12 @@ Estrategia planificada (no requerida en la Entrega 1; se implementa en Entregas 
   - TA-Lib: RSI(14) y ATR(14) contra los valores de referencia publicados por StockCharts ChartSchool con tolerancia de 1e-6, más una implementación mínima de Wilder **solo en los tests** como oráculo independiente.
 - **Integración:** API + PostgreSQL con Testcontainers (igual en local y en CI) y el proveedor de ficheros — subir XLSX de fixture → persistencia → `GET /api/cartera/posiciones`; segunda importación sustituye a la primera; códigos `409`/`422`/`503`; con el proveedor caído, `200` si la caché cubre el rango (aunque esté desactualizada) y `503` con `Retry-After` si no lo cubre.
 - **E2E (Playwright), con `PROVEEDOR_PRECIOS=ficheros`:** subir cartera de ejemplo → ver Watchlist → ver TWR → elegir estrategia y ver señales → ejecutar backtest → ver operaciones recomendadas.
-- **Seguridad:** fixtures maliciosos (zip bomb, `.xlsm`, XXE, inyección de fórmulas, fichero no-ZIP renombrado) → respuesta 4xx controlada.
+- **Seguridad: fixtures maliciosos** (escenarios de `importacion-cartera`), cada uno con la cartera anterior intacta:
+  - zip bomb de 200 KB que declara 2 GB → `413`; 300 KB que se descomprimen en 40 MB (proporción > 100:1) → `413`; 1.500 entradas en el ZIP → `413`;
+  - `cartera.xlsx` con `xl/vbaProject.bin` → `415`; primeros bytes OLE `D0 CF 11 E0` → `415`; `<!DOCTYPE` con entidad a `file:///etc/passwd` → `415` sin resolverla; carpeta `xl/externalLinks/` → `415`; fichero CSV → `415`;
+  - 10.001 filas de datos → `422` y 10.000 → `201`; ticker `=HYPERLINK("http://x","AAPL")` en la fila 3 → `422`; precio de compra 0 y de venta −10 → `422`; fórmula sin valor calculado → `422`;
+  - ticker de 500 caracteres → el error incluye solo 20 caracteres y `…`; ticker `<img src=x onerror=alert(1)>` → el E2E comprueba que se ve como texto literal y no se ejecuta ningún `alert`.
+- **Seguridad: API** (escenarios de `seguridad-api`): `Host: atacante.example:8080` → `400`; `Origin: https://atacante.example` en la importación → `403`; `POST /api/backtests` sin `Origin` ni `Sec-Fetch-Site` → aceptado; sexta importación en un minuto → `429` con `Retry-After`; 100 `GET /api/cartera/posiciones` en un minuto → ningún `429`; periodo `abc` → `400`; campo `comision` en el backtest → `400`; excepción forzada en la TWR → `500` en `problem+json` con identificador de incidencia y sin traza.
 - **LLM (S1, si se implementa):** respuestas simuladas para tests deterministas; validación de estructura/campos obligatorios en salidas reales.
 
 ### **2.7. Stack tecnológico**
@@ -634,10 +676,19 @@ Códigos comunes:
 - **`409 Conflict`** si no hay cartera importada, en `GET /cartera/rentabilidad/twr`, `GET /estrategias/{id}/senales`, `POST /backtests` y `GET /recomendaciones`. Sin cartera, `GET /cartera/posiciones` responde `200` con una lista vacía, y `GET /estrategias` (catálogo) no depende de la cartera.
 - **`503 Service Unavailable`** si no se pueden obtener precios del proveedor de mercado y la caché no cubre el rango que necesita la petición, en esos mismos cuatro endpoints y en el histórico de señales (ver "Proveedor de mercado no disponible"). `GET /cartera/posiciones` no responde `503`: degrada por posición y devuelve cada posición abierta sin cotización con precio de referencia y rendimiento vacíos y el motivo, y el resto con normalidad. `GET /estrategias` no usa el proveedor.
 - **`404 Not Found`** si la estrategia no existe, en señales, backtest y recomendaciones.
-- **`400 Bad Request`** si los parámetros de la estrategia están fuera de rango o son incoherentes.
+- **`400 Bad Request`** si los parámetros de la estrategia están fuera de rango o son incoherentes, y en general si los parámetros de ruta, de consulta o el cuerpo JSON no superan la validación de tipos, rangos o campos admitidos (por ejemplo, el periodo `abc` o un campo `comision` inexistente). Se responde `400` y no el `422` por defecto de FastAPI; `422` queda reservado para el contenido del fichero importado y los tickers sin histórico.
+
+Códigos de seguridad, en todos los endpoints (spec `seguridad-api`):
+- **`400 Bad Request`** si la cabecera `Host`, sin el puerto, no es `localhost` ni `127.0.0.1` (DNS rebinding).
+- **`403 Forbidden`** en los `POST` cuyo `Origin` no es el de la aplicación, o que no tienen `Origin` y llegan con `Sec-Fetch-Site` `cross-site` o `same-site`. Sin ninguna de las dos cabeceras (curl, tests) la petición se acepta.
+- **`429 Too Many Requests`** con `Retry-After` en segundos al superar 5 peticiones por minuto a `POST /cartera/importacion` o 10 por minuto a `POST /backtests`; el resto de endpoints no se limita.
+- **`500 Internal Server Error`** ante cualquier error no previsto, con un cuerpo `application/problem+json` con tipo, título e identificador de incidencia, sin trazas, rutas, consultas SQL ni configuración.
 
 Códigos específicos de un endpoint:
-- `POST /cartera/importacion`: `413` si el fichero supera 5 MB, `415` si no es un XLSX y `422` si falta una columna obligatoria o hay filas no válidas.
+- `POST /cartera/importacion`, siempre sin modificar la cartera existente:
+  - `413` si el fichero supera 5 MB o si su índice ZIP declara más de 50 MB descomprimidos, una proporción mayor de 100:1 o más de 1.000 entradas;
+  - `415` si no es una hoja `.xlsx` estándar según su contenido: no es un ZIP, es OLE (`.xls` antiguo o cifrado), contiene macros, objetos incrustados o vínculos externos, o tiene declaraciones DTD o entidades XML;
+  - `422` si falta una columna obligatoria, hay filas no válidas (incluidos un ticker que no cumple `^[A-Z.\-]{1,10}$` y precios no positivos), hay más de 10.000 filas de datos o el análisis supera 10 segundos. Los mensajes repiten como mucho 20 caracteres del valor de una celda.
 - `GET /cartera/rentabilidad/twr`: `422` si el proveedor no tiene ningún precio histórico para algún ticker de la cartera, indicando los tickers sin histórico.
 - `GET /estrategias/{id}/senales/{ticker}/historico`: `404` si el ticker no tiene posición abierta en la cartera.
 - `GET /recomendaciones`: `400` si no se indica la estrategia.
@@ -687,10 +738,12 @@ paths:
                   posiciones_importadas: { type: integer, example: 3 }
                   abiertas: { type: integer, example: 2 }
                   cerradas: { type: integer, example: 1 }
-        '413': { description: Fichero de más de 5 MB; la cartera existente no cambia }
-        '415': { description: El fichero no es un XLSX; la cartera existente no cambia }
+        '400': { description: "Cabecera Host no admitida (distinta de localhost o 127.0.0.1)" }
+        '403': { description: "Origin de otra web, o Sec-Fetch-Site cross-site o same-site sin Origin; la cartera existente no cambia" }
+        '413': { description: "Fichero de más de 5 MB, o índice ZIP con más de 50 MB descomprimidos, proporción mayor de 100:1 o más de 1.000 entradas; la cartera existente no cambia" }
+        '415': { description: "El fichero no es una hoja .xlsx estándar según su contenido (no es ZIP, OLE, macros, objetos incrustados, vínculos externos, DTD o entidades XML); la cartera existente no cambia" }
         '422':
-          description: Faltan columnas obligatorias o hay filas no válidas; no se importa ninguna posición
+          description: "Faltan columnas obligatorias, hay filas no válidas (ticker fuera de ^[A-Z.\\-]{1,10}$, precios no positivos, etc.), más de 10.000 filas de datos o análisis de más de 10 s; no se importa ninguna posición. Los mensajes repiten como mucho 20 caracteres de una celda"
           content:
             application/json:
               schema:
@@ -704,6 +757,15 @@ paths:
                         fila: { type: integer, nullable: true, example: 7 }
                         columna: { type: string, nullable: true, example: "Fecha de venta" }
                         mensaje: { type: string, example: "La fecha de venta es anterior a la fecha de compra" }
+        '429':
+          description: Más de 5 importaciones por minuto; la cartera no cambia por esta petición
+          headers:
+            Retry-After: { description: Segundos que hay que esperar, schema: { type: integer, example: 42 } }
+        '500':
+          description: Error no previsto, sin trazas ni detalles internos; la importación falla cerrada
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problema' }
 
   /api/cartera/rentabilidad/twr:
     get:
@@ -803,12 +865,25 @@ paths:
                     type: array
                     items: { type: string }
                     example: ["cruce-medias habría obtenido +3,00 pp anualizados"]
-        '400': { description: Parámetros fuera de rango o incoherentes }
+        '400': { description: "Parámetros fuera de rango o incoherentes, o campo no admitido en el cuerpo (p. ej. comision)" }
         '404': { description: Estrategia inexistente }
+        '429':
+          description: Más de 10 backtests por minuto
+          headers:
+            Retry-After: { description: Segundos que hay que esperar, schema: { type: integer } }
         '409': { description: No hay cartera importada }
         '503': { description: Datos de mercado no disponibles }
 components:
   schemas:
+    Problema:
+      type: object
+      description: application/problem+json (RFC 9457), usado en 500 y 503
+      properties:
+        type: { type: string, example: "about:blank" }
+        title: { type: string, example: "Error interno" }
+        status: { type: integer, example: 500 }
+        detail: { type: string, nullable: true }
+        incidencia: { type: string, description: "Identificador de incidencia (en los 500)", example: "8f3c1a2e" }
     Metricas:
       type: object
       description: Las métricas de posiciones cerradas son null si no hay ninguna
@@ -858,6 +933,15 @@ Dado un XLSX con cantidad 0 en la fila 4 y una fecha de venta anterior a la de c
 Cuando lo subo
 Entonces recibo un error 422 con un error para la fila 4 y otro para la fila 7
 Y la cartera anterior no cambia
+
+Dado un libro con macros renombrado como cartera.xlsx, que contiene xl/vbaProject.bin
+Cuando lo subo
+Entonces recibo un error 415 indicando que no se admiten ficheros con macros
+Y la cartera anterior no cambia
+
+Dado un XLSX válido con 10.001 filas de datos
+Cuando lo subo
+Entonces recibo un error 422 indicando que el máximo es 10.000 filas
 ```
 Prioridad: Must · Estimación: 8 SP
 
