@@ -161,8 +161,8 @@ Cada ticket añade solo su DoD específica.
 ```mermaid
 flowchart LR
     OPS01[OPS-01] --> DB01[DB-01] & SEC01[SEC-01] & QA01[QA-01] & REL01[REL-01]
-    DB01 --> BE01a[BE-01a] & BE02[BE-02]
-    BE01a --> BE01b[BE-01b]
+    DB01 --> BE01a[BE-01a] & BE01b[BE-01b] & BE02[BE-02]
+    BE01a --> BE01b
     SEC01 --> BE01b & FE01[FE-01]
     BE01b --> BE07[BE-07]
     BE02 --> BE07 & BE03[BE-03] & BE04[BE-04]
