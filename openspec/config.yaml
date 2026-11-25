@@ -18,16 +18,27 @@ context: |
   - Producto educativo: nunca ejecuta órdenes reales y siempre muestra que no constituye
     asesoramiento financiero.
 
-  Stack previsto: backend Python 3.12 + FastAPI + Pydantic v2, pandas, PostgreSQL 16 con
-  SQLAlchemy 2 y Alembic; frontend React 18 + TypeScript + Vite; Docker Compose y
-  GitHub Actions. Arquitectura: monolito modular con dominio puro sin I/O y adaptadores
-  detrás de interfaces (XLSX, proveedor de precios, BD, LLM opcional).
+  Stack: backend Python 3.12 + FastAPI + Pydantic v2, pandas y numpy, dependencias con
+  uv (uv.lock, uv sync --frozen); PostgreSQL 16 con SQLAlchemy 2 y Alembic; indicadores
+  con TA-Lib >= 0.6.5 detrás del puerto IndicadoresTecnicos; datos de mercado con
+  yfinance (auto_adjust=False) y un proveedor de ficheros para tests y demo; frontend
+  React 18 + TypeScript + Vite con TanStack Query/Table, Recharts y Lightweight Charts,
+  y tipos generados con openapi-typescript; Docker Compose (db, migrate, api, web con
+  nginx) solo en local, GitHub Actions y GHCR.
+  Arquitectura: monolito modular hexagonal con dominio puro sin I/O y siete puertos
+  (LectorCartera, ProveedorPrecios, RepositorioCartera, CachePrecios, Reloj, ClienteLLM,
+  IndicadoresTecnicos); fronteras comprobadas con import-linter en el backend y ESLint
+  import/no-restricted-paths en el frontend. Detalle en las secciones 2 y 3 del readme.
 
   Fuente de verdad: las specs vivas de openspec/specs/. El readme.md se deriva de ellas y
   de los artefactos de los changes; si divergen, prevalecen las specs.
 
-  Entregas: en la Entrega 1 (documentación técnica) no se escribe código; solo specs,
-  artefactos de changes, readme.md y prompts.md.
+  Entregas: la Entrega 1 (documentación técnica) está cerrada en la rama
+  feature/entrega-1-sg, que no se modifica. En la Entrega 2 se implementa el flujo
+  principal con los tickets OPS-01, DB-01, SEC-01, BE-01a, BE-01b, BE-02, BE-07 y FE-01
+  (sección 6 del readme). Cada ticket es un change de OpenSpec con tareas de código;
+  lleva skip_specs: true salvo que el ticket cambie comportamiento observable, en cuyo
+  caso incluye su delta.
 
 # Reglas por artefacto
 rules:
@@ -46,7 +57,7 @@ rules:
   tasks:
     - Agrupa las tareas por tipo (base de datos, backend, frontend, tests, devops) y referencia la HU.
     - Cada tarea incluye criterios de aceptación verificables.
-    - En la Entrega 1 las tareas son solo de documentación, sin código.
+    - Las tareas de código citan los escenarios que cubren con el identificador `capability::Requirement::Scenario` y cumplen la Definition of Done común de la sección 6 del readme.
 
 # Indicaciones por operación
 operations:
