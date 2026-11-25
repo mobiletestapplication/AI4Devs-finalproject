@@ -97,7 +97,7 @@ Ticket SEC-01 (Entrega 2), transversal a HU-1..HU-5. S1-S8 remiten a design.md. 
   - **Sección 4:** formato `problem+json` de los errores con un ejemplo de `400` y uno de `429`.
 
   Verificar que el readme no contradice los deltas y con `openspec validate sec-01-seguridad-api --strict`.
-- [ ] 5.4 Hacer commit, subir la rama y comprobar que el CI queda en verde en GitHub. Verificar con `gh run view`.
+- [x] 5.4 Hacer commit, subir la rama y comprobar que el CI queda en verde en GitHub. Verificar con `gh run view`.
 
 ## Workflow follow-up
 
