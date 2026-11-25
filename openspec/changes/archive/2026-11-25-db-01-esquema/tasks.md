@@ -77,7 +77,7 @@ Ticket DB-01 (ticket 1 de la sección 6, Entrega 2), soporte de HU-1..HU-5. D1-D
   - `\d posicion` muestra los CHECK con los nombres del design.
 
   Repetir con el volumen existente de OPS-01 (sin `down -v`) para comprobar que la migración se aplica sobre él.
-- [ ] 4.2 Subir la rama y comprobar que el CI queda en verde en GitHub, con el contenedor de Testcontainers arrancando en `backend-tests`. Verificar con `gh run view`.
+- [x] 4.2 Subir la rama y comprobar que el CI queda en verde en GitHub, con el contenedor de Testcontainers arrancando en `backend-tests`. Verificar con `gh run view`.
 
 ## 5. Documentación (HU-1..HU-5)
 
