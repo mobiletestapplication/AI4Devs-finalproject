@@ -54,7 +54,7 @@ Ticket QA-01, parte 1 (Entrega 2), transversal a HU-1..HU-5. T1-T6 remiten a des
   - `uv run python tests/trazabilidad.py --vitest $RUNNER_TEMP/vitest.json`.
 
   Verificar ejecutando en local la misma secuencia y con `actionlint` sin errores.
-- [ ] 3.2 Subir la rama y comprobar que el CI queda en verde en GitHub, con `gh run view` y el paso de trazabilidad visible en `backend-calidad`.
+- [x] 3.2 Subir la rama y comprobar que el CI queda en verde en GitHub, con `gh run view` y el paso de trazabilidad visible en `backend-calidad`.
 
 ## 4. Documentación (HU-1..HU-5)
 
