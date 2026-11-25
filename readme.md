@@ -76,7 +76,7 @@ Cada funcionalidad tiene su especificación viva en `openspec/specs/<capability>
 | F2 | TWR | `rentabilidad-twr` | Valoración diaria de la cartera al cierre de cada sesión, en la que las posiciones abiertas aportan su ganancia o pérdida no realizada hasta la última sesión con cierre disponible, y cálculo de la **Time-Weighted Rate of Return** tratando cada compra como aportación y cada venta como retirada; un flujo fechado en un día sin sesión cuenta en la primera sesión posterior. Salida: TWR acumulada, anualizada (no aplicable si el periodo < 365 días), mensual y por semana ISO, junto con la TWR del **índice de referencia** (SPY por defecto) calculada solo en las mismas sesiones incluidas, la diferencia en puntos porcentuales y una curva de valor base 100 de la cartera y del índice. Si faltan los datos del índice, la TWR de la cartera se devuelve igualmente, sin la referencia y con el motivo. |
 | F3 | Estrategias por indicador | `estrategias-indicador` | Catálogo de estrategias de un único indicador sobre cierres diarios: **`rsi`** (RSI de Wilder 14, sobreventa 30, sobrecompra 70) y **`cruce-medias`** (SMA 50 / SMA 200). Para cada ticker con posición abierta, cada una emite Compra, Venta o Mantener con una intensidad 0-100 (o "Sin datos suficientes" con intensidad 0 si el histórico no alcanza el mínimo: el periodo en las SMA y el periodo + 100 sesiones en el RSI, por ejemplo 114 sesiones para RSI(14)), con el valor del indicador, la fecha de la sesión usada y la fecha desde la que se mantiene la señal. También ofrece el histórico diario de cierre, indicador y señal de un ticker (por defecto, el último año) con las fechas de cambio de señal. La estrategia y sus parámetros elegidos se comparten con el resto del dashboard. |
 | F4 | Backtesting | `backtesting` | Simula la estrategia seleccionada con sus parámetros y el resto del catálogo con sus parámetros por defecto sobre los tickers de la cartera desde la primera compra real, con el máximo capital invertido simultáneamente, medido a coste de compra, repartido a partes iguales, solo largos, sin comisiones ni deslizamiento y ejecutando a la apertura de la sesión siguiente. Métricas, también para la cartera real con las posiciones abiertas valoradas al último cierre disponible: TWR acumulada y anualizada, máximo drawdown, % de aciertos, ganancia y pérdida media, factor de beneficio y duración media, y de riesgo: volatilidad anualizada, ratio de Sharpe (tasa libre de riesgo 0), ratio de Calmar, exposición y número de operaciones (compras y ventas), también para las líneas base. La comparativa se ordena por TWR por defecto o, a elección, por Sharpe, Calmar o máximo drawdown, y la respuesta avisa del **sesgo de selección** (tickers elegidos a posteriori, con los que se compraron después del inicio de la simulación). Incluye dos **líneas base** que no son estrategias del catálogo: `buy-hold` (comprar y mantener los mismos tickers con el mismo capital y reparto) y el índice de referencia con todo el capital. Compara la cartera real, las estrategias y las líneas base, y propone tres tipos de mejora: estrategias o `buy-hold` que superan a la cartera real (en pp, indicando si una estrategia queda por debajo de `buy-hold`; el índice no genera propuestas), ventas con ganancia como Short-Term en los 30 días anteriores a pasar a Long-Term, y compras reales hechas mientras la estrategia seleccionada emitía Venta, con su resultado agregado. |
-| F5 | Hasta 10 operaciones recomendadas | `operaciones-recomendadas` | Operaciones Comprar/Vender sobre los tickers con posición abierta, derivadas de las señales de la estrategia seleccionada (se excluyen las señales Mantener y "Sin datos suficientes", y las Compra de tickers sin histórico suficiente para el ATR(14), es decir, con menos de 114 sesiones), ordenadas por intensidad (empate: ticker alfabético), una por ticker. Cada una indica el precio de referencia (último cierre disponible), el motivo con el valor del indicador y los umbrales o medias de la estrategia, y la fecha de la sesión usada. Las compras incluyen stop-loss (precio − 2 × ATR 14) y objetivo (precio + 3 × ATR 14); las ventas incluyen la cantidad abierta y un aviso fiscal si una posición con ganancia está a ≤ 30 días de pasar a Long-Term. |
+| F5 | Hasta 10 operaciones recomendadas | `operaciones-recomendadas` | Operaciones Comprar/Vender sobre los tickers con posición abierta, derivadas de las señales de la estrategia seleccionada (se excluyen las señales Mantener y "Sin datos suficientes", y las Compra de tickers sin histórico suficiente para el ATR(14), es decir, con menos de 114 sesiones), ordenadas por intensidad (empate: ticker alfabético), una por ticker. Cada una indica el precio de referencia (último cierre disponible), el motivo con el valor del indicador y los umbrales o medias de la estrategia, y la fecha de la sesión usada. Las compras incluyen stop-loss (precio − 2 × ATR 14) y objetivo (precio + 3 × ATR 14); las ventas incluyen la cantidad abierta y un aviso fiscal si una posición con ganancia está a ≤ 30 días de pasar a Long-Term. Las compras incluyen además la **cantidad sugerida por riesgo** (entero de acciones tal que, si salta el stop-loss, la pérdida no supere el 1 % del valor de la cartera por defecto, ajustable entre 0,1 % y 5 %), con el capital necesario y su peso en la cartera, y un **aviso de wash sale** si el ticker se vendió con pérdida en los 30 días anteriores. Cada operación indica la **antigüedad de su señal** en sesiones ("Nueva" si son 5 o menos), y un filtro opcional excluye las señales más antiguas antes de elegir las 10. |
 
 **Should-have (opcional, sin spec todavía; se añadirán como *change* de OpenSpec si se abordan)**
 - S1: Justificación en lenguaje natural de cada recomendación generada por LLM con salida estructurada (JSON validado), sin influir en el orden de las recomendaciones.
@@ -105,7 +105,7 @@ Dashboard de una sola página con secciones (wireframes a generar en la Entrega 
 2. **Rentabilidad (F2)** — TWR acumulada y anualizada (o "No aplicable (periodo inferior a un año)") en porcentaje con dos decimales, con las fechas de inicio y fin y una ayuda sobre qué mide la TWR; junto a la TWR de la cartera, la del índice ("SPY: 10,00 %") y la diferencia ("+11,00 pp" en verde o con `−` en rojo); gráfico de líneas con la curva base 100 de la cartera y la del índice; selector Mensual/Semanal con gráfico de barras (verde/rojo, marca en periodos parciales) y tabla con las columnas del índice y de la diferencia. Si no hay datos del índice, "Índice de referencia no disponible" en lugar de sus valores. Tras importar una nueva cartera, el panel se recalcula sin recargar la página.
 3. **Estrategias (F3)** — selector de estrategia con sus parámetros y descripción de reglas (un valor no válido muestra un error junto al campo y no se recalculan las señales hasta corregirlo); tabla de señales por ticker (Compra verde, Venta roja, Mantener gris, "Sin datos suficientes" atenuada) con intensidad, valor del indicador y fecha desde la que se mantiene; al pulsar un ticker, gráfico del precio del último año con el indicador en un panel inferior, junto con los umbrales o las medias de la estrategia, y marcas de Compra y Venta en los cambios de señal.
 4. **Backtesting (F4)** — botón "Ejecutar backtest" con indicador de progreso, deshabilitado hasta que termina el cálculo; tabla comparativa (cartera real, cada estrategia y cada línea base, estas con la etiqueta "Línea base") con TWR acumulada y anualizada, máximo drawdown, % de aciertos y factor de beneficio, más volatilidad y exposición en % con dos decimales, Sharpe y Calmar con dos decimales y número de operaciones, `—` con el motivo al pasar el cursor si un valor no está disponible y una ayuda por métrica; ordenada según el selector de criterio (TWR, Sharpe, Calmar o drawdown), que reordena la tabla y la fila destacada sin cambiar las curvas; aviso fijo de sesgo de selección que, al desplegarlo, lista los tickers comprados después del inicio de la simulación con sus dos fechas; curvas base 100 superpuestas, también de las líneas base con trazo discontinuo, que se pueden ocultar desde la leyenda; propuestas de mejora en lenguaje claro y operaciones simuladas de la estrategia elegida. Si fallan los datos de mercado, mensaje que explica el problema con la opción de reintentar; si se supera el límite de backtests por minuto (`429`), mensaje con los segundos que hay que esperar antes de reintentar.
-5. **Operaciones recomendadas (F5)** — lista numerada con ticker, etiqueta Comprar (verde) o Vender (rojo), intensidad como barra, precio de referencia, motivo y, en compras, stop-loss y objetivo; fecha de la sesión usada. Se recalcula al cambiar la estrategia o sus parámetros, indicando la estrategia aplicada. Con menos de 10 operaciones, mensaje que explica que el resto de tickers tiene señal Mantener o sin datos suficientes; sin ninguna, mensaje de que no hay operaciones recomendadas para esa estrategia hoy. Icono de aviso fiscal en ventas que, al pasar el cursor o pulsarlo, muestra la fecha a partir de la cual la posición pasaría a Long-Term.
+5. **Operaciones recomendadas (F5)** — lista numerada con ticker, etiqueta Comprar (verde) o Vender (rojo), intensidad como barra, precio de referencia, motivo, antigüedad de la señal con la etiqueta "Nueva" y, en compras, stop-loss, objetivo y cantidad sugerida con su capital ("25 acciones · 2.500 USD (25,00 % de la cartera)", con una ayuda sobre la pérdida hasta el stop-loss); campo para ajustar el porcentaje de riesgo (error junto al campo fuera de 0,1-5, sin recalcular); filtro "Solo señales recientes" (antigüedad ≤ 5 sesiones); icono de wash sale en compras que muestra la fecha de la venta con pérdida y la fecha a partir de la cual la compra ya no afectaría; fecha de la sesión usada. Se recalcula al cambiar la estrategia o sus parámetros, indicando la estrategia aplicada. Con menos de 10 operaciones, mensaje que explica que el resto de tickers tiene señal Mantener o sin datos suficientes; sin ninguna, mensaje de que no hay operaciones recomendadas para esa estrategia hoy. Icono de aviso fiscal en ventas que, al pasar el cursor o pulsarlo, muestra la fecha a partir de la cual la posición pasaría a Long-Term.
 
 Avisos permanentes: "Las señales son orientativas y no constituyen asesoramiento financiero" (F3 y F5) y "Las rentabilidades pasadas no garantizan rentabilidades futuras" (F4).
 
@@ -243,7 +243,7 @@ flowchart LR
 | Dominio · indicadores | Python, sobre el puerto `IndicadoresTecnicos` | Histórico mínimo, "Sin datos suficientes" y alineación de series |
 | Dominio · estrategias | Python | Catálogo, validación de parámetros, reglas, intensidad y fecha de inicio de la señal |
 | Dominio · backtest | pandas | Simulación sin sesgo de anticipación, métricas, comparativa y mejoras; líneas base `buy-hold` e índice simuladas con el mismo motor mediante una señal constante (Compra en la primera sesión, Mantener después), registradas aparte del catálogo; sin datos del índice, esa línea base se marca como no disponible; métricas de riesgo (volatilidad, Sharpe, Calmar, exposición, número de operaciones) como funciones puras sobre las rentabilidades diarias, la curva y las operaciones ya calculadas; criterio de ordenación que solo reordena la comparativa (las propuestas de mejora siguen comparando TWR); aviso de sesgo de selección |
-| Dominio · recomendaciones | Python · `Decimal` | Hasta 10 operaciones, stop-loss y objetivo por ATR, aviso fiscal |
+| Dominio · recomendaciones | Python · `Decimal` | Hasta 10 operaciones, stop-loss y objetivo por ATR, aviso fiscal; cantidad sugerida por riesgo (entero), antigüedad de la señal en sesiones y aviso de wash sale; el filtro de antigüedad se aplica antes del límite de 10, y sin él la selección y el orden no cambian |
 | Adaptador XLSX | openpyxl · defusedxml | Seguridad del fichero en el orden de la sección 2.5 (tamaño en streaming, firma, índice ZIP, content types sin macros, objetos, vínculos ni DOCTYPE), parseo `read_only` + `data_only` con ≤ 10.000 filas y ≤ 10 s, cabeceras flexibles con columnas adicionales ignoradas y filas totalmente vacías saltadas, celdas de fecha de Excel o texto `AAAA-MM-DD` y números o texto con punto decimal convertidos con `Decimal(repr(...))`, y validación por fila (ticker con el patrón `^[A-Z.\-]{1,10}$`, cantidad > 0 con ≤ 6 decimales, precios > 0 redondeados a 6 decimales, fechas no futuras, venta ≥ compra, venta completa) |
 | Adaptador proveedor de precios | yfinance (`auto_adjust=False`) · proveedor de ficheros | OHLC y splits; errores clasificados, traducción de símbolos y conversión a `Decimal` |
 | Adaptador indicadores | TA-Lib ≥ 0.6.5 | RSI, SMA y ATR de Wilder, y los indicadores futuros |
@@ -551,6 +551,7 @@ El script `tests/trazabilidad.py` lee `openspec/specs/**/spec.md` y la lista de 
 - **Ordenación:** Sharpe 0,60 / 0,90 / 0,75 → `rsi`, `cruce-medias`, real; drawdown −30 % / −12 % / −20 % → −12 %, −20 %, −30 %; `calmar` con periodo < 1 año → ordenado por TWR acumulada indicándolo; `orden` = `beneficio` → `400`; con `orden` = `sharpe` las propuestas siguen comparando TWR; sesgo: `NVDA` comprada el 2024-06-03 con inicio el 2024-01-10 → aparece en el aviso.
 - **Backtest sin sesgo de anticipación:** señal al cierre de t a 100 y apertura de t+1 a 101 → compra a 101; **propiedad de invariancia de prefijo:** simular con la serie completa y con la serie recortada en el día d da las mismas decisiones hasta d.
 - **Recomendaciones:** máximo 10, empate por ticker alfabético, stop-loss y objetivo por ATR y aviso fiscal a ≤ 30 días de Long-Term; una Compra de `cruce-medias` 20/100 con 105 sesiones (menos de las 114 del ATR(14)) no se recomienda y una Venta con menos de 114 sesiones sí.
+- **Cantidad, antigüedad y wash sale:** 10.000 USD, 1 %, 100 y 96 → 25 acciones y 2.500 USD (25 %); 180 y 170,40 → 10 acciones; 1.000 USD, 0,5 %, 500 y 450 → 0 con motivo y la operación se recomienda; la Venta no lleva cantidad sugerida; antigüedad 4 sesiones → "Nueva" y 30 → no; 12 candidatas con 4 de antigüedad ≤ 5 y `antiguedad_max` 5 → 4 operaciones, y sin filtro → 10; venta con pérdida el 2025-03-03 y sesión del 2025-03-20 → aviso hasta el 2025-04-03; venta con ganancia o con pérdida el 2025-01-10 → sin aviso.
 - **Datos de mercado:** descarte de la barra del día en curso antes de las 16:15 ET.
 - **Arquitectura:** contrato de import-linter en CI (el dominio no importa adaptadores, TA-Lib ni infraestructura).
 
@@ -567,6 +568,7 @@ El script `tests/trazabilidad.py` lee `openspec/specs/**/spec.md` y la lista de 
 - la caché evita una segunda llamada al proveedor;
 - con el proveedor caído, `200` si la caché cubre el rango (aunque esté desactualizada) y `503` con `Retry-After` si no lo cubre;
 - la barra del día en curso no se guarda;
+- `GET /api/recomendaciones` con `riesgo` 2 y `antiguedad_max` 5 → `200` con esos valores aplicados; `riesgo` 10 → `400`; `antiguedad_max` −1 → `400`;
 - sin datos del índice de referencia, `GET /api/cartera/rentabilidad/twr` responde `200` con la TWR de la cartera y el motivo "datos del índice de referencia no disponibles", y `POST /api/backtests` responde `200` con la línea base del índice no disponible; `POST /api/backtests` con la estrategia `buy-hold` → `404`.
 
 **E2E (Playwright)**, contra `docker compose` con `PROVEEDOR_PRECIOS=ficheros` y `FECHA_ACTUAL_FIJA`, un recorrido por historia de usuario:
@@ -772,6 +774,9 @@ Ejemplo:
 - **Histórico mínimo de los indicadores:** el periodo en las SMA y `periodo + 100` sesiones en el RSI y el ATR de Wilder (114 para RSI(14) y ATR(14)).
 - **Intensidad:** `rsi`: Compra `(sobreventa − RSI) ÷ sobreventa × 100` y Venta `(RSI − sobrecompra) ÷ (100 − sobrecompra) × 100`; `cruce-medias`: `min(100, |SMA_c − SMA_l| ÷ SMA_l × 1000)`; Mantener: 0.
 - **Stop-loss y objetivo de las compras:** `P_ref − 2 × ATR(14)` y `P_ref + 3 × ATR(14)`. Ejemplo: 100 y 2 → 96 y 106.
+- **Cantidad sugerida de las compras:** `⌊valor_cartera × riesgo ÷ (P_ref − stop)⌋`, con `valor_cartera` la suma de las posiciones abiertas al último cierre y `riesgo` 1 % por defecto; capital necesario `cantidad × P_ref`. Ejemplos: 10.000 × 1 % ÷ (100 − 96) = 25 acciones y 2.500 USD (25 % de la cartera); 100 ÷ (180 − 170,40) = 10,42 → 10 acciones; si da 0, se recomienda igualmente con el motivo "el riesgo permitido no alcanza para una acción".
+- **Antigüedad de la señal:** sesiones con cierre entre la sesión en que empezó la señal y la sesión usada (0 si empezó en ella), con el calendario de sesiones de los datos; "Nueva" si ≤ 5. Ejemplo: del lunes 2025-03-03 al viernes 2025-03-07 → 4 sesiones.
+- **Wash sale (simplificada):** aviso en una Compra si el ticker tiene una posición cerrada vendida con pérdida en los 30 días naturales anteriores a la sesión usada; la compra deja de afectar el día 31 tras la venta. Ejemplo: venta con pérdida el 2025-03-03 y sesión del 2025-03-20 → aviso hasta el 2025-04-03.
 - **Cierre sin ajustar:** `cierre_sin_ajustar = cierre × F(fecha)`, donde `F(fecha)` es el producto de las proporciones de los splits posteriores a esa fecha. Ejemplo: split 10:1 el 2024-06-10; el cierre ajustado del 2024-06-07 es 120,00, luego el sin ajustar es 1.200,00. Después del último split las dos series coinciden.
 - **Serie que usa cada feature:** **cierre sin ajustar** en la Watchlist, el rendimiento y la TWR (F1, F2); **OHLC ajustado por splits** en los indicadores y las señales (F3), el backtest (F4) y el ATR de las recomendaciones (F5).
 - **TWR del índice de referencia:** rentabilidad diaria `cierre_t ÷ cierre_{t−1} − 1` (cierre ajustado por splits, porque el índice no tiene cantidades del XLSX que valorar), encadenada **solo en las sesiones incluidas en la TWR de la cartera**; los periodos sin inversión lo son también para el índice. Ejemplo: cierres 400 → 440 → 396 en dos sesiones incluidas → 10 % y −10 % → TWR del índice −1 %.
@@ -805,7 +810,7 @@ Endpoints del MVP (base `/api`, cartera única sin identificador):
 | GET | `/estrategias/{id}/senales` | F3 |
 | GET | `/estrategias/{id}/senales/{ticker}/historico` | F3 |
 | POST | `/backtests` | F4 |
-| GET | `/recomendaciones?estrategia={id}` | F5 |
+| GET | `/recomendaciones?estrategia={id}&riesgo={0,1-5}&antiguedad_max={0-250}` | F5 |
 
 Códigos comunes:
 - **`409 Conflict`** si no hay cartera importada, en `GET /cartera/rentabilidad/twr`, `GET /estrategias/{id}/senales`, `POST /backtests` y `GET /recomendaciones`. Sin cartera, `GET /cartera/posiciones` responde `200` con una lista vacía, y `GET /estrategias` (catálogo) no depende de la cartera.
@@ -826,7 +831,7 @@ Códigos específicos de un endpoint:
   - `422` si falta una columna obligatoria, hay filas no válidas (incluidos un ticker que no cumple `^[A-Z.\-]{1,10}$` y precios no positivos), hay más de 10.000 filas de datos o el análisis supera 10 segundos. Los mensajes repiten como mucho 20 caracteres del valor de una celda.
 - `GET /cartera/rentabilidad/twr`: `422` si el proveedor no tiene ningún precio histórico para algún ticker de la cartera, indicando los tickers sin histórico.
 - `GET /estrategias/{id}/senales/{ticker}/historico`: `404` si el ticker no tiene posición abierta en la cartera.
-- `GET /recomendaciones`: `400` si no se indica la estrategia.
+- `GET /recomendaciones`: `400` si no se indica la estrategia, si `riesgo` está fuera de 0,1-5 o si `antiguedad_max` está fuera de 0-250.
 
 Las excepciones de dominio se traducen a HTTP en un único manejador: `CarteraNoImportada` → `409`, `ProveedorNoDisponible` → `503`, `TickersSinHistorico` → `422`, `EstrategiaInexistente` y `TickerFueraDeCartera` → `404`, `ParametrosNoValidos` → `400`. Los errores de subida (`413`, `415`, `422`) los genera la validación de la importación.
 
@@ -841,6 +846,37 @@ Las excepciones de dominio se traducen a HTTP en un único manejador: `CarteraNo
 
 - **`422` frente a `503`:** `422` significa que el proveedor respondió y el ticker no tiene histórico; `503`, que no se pudo contactar con el proveedor.
 - **Cuerpo del `503`:** `application/problem+json` con tipo, título y detalle, sin datos internos del proveedor, y cabecera `Retry-After: 60`, que el frontend usa para el botón de reintentar.
+
+**`GET /recomendaciones`: parámetros de riesgo y antigüedad.** `riesgo` es un porcentaje opcional entre 0,1 y 5 (por defecto 1) y `antiguedad_max` un entero opcional entre 0 y 250 (sin él no se filtra por antigüedad); la respuesta indica los valores aplicados. Ejemplo de respuesta con `estrategia=rsi&riesgo=1`:
+
+```json
+{
+  "estrategia": "rsi",
+  "parametros": { "periodo": 14, "sobreventa": 30, "sobrecompra": 70 },
+  "riesgo": 1,
+  "antiguedad_max": null,
+  "fecha_sesion": "2025-03-20",
+  "operaciones": [
+    {
+      "ticker": "TSLA",
+      "tipo": "Comprar",
+      "intensidad": 26.67,
+      "precio_referencia": 100.00,
+      "motivo": "RSI(14) = 22, por debajo de 30",
+      "stop_loss": 96.00,
+      "objetivo": 106.00,
+      "cantidad_sugerida": 25,
+      "capital_necesario": 2500.00,
+      "peso_cartera": 0.25,
+      "motivo_cantidad": null,
+      "antiguedad_sesiones": 4,
+      "nueva": true,
+      "aviso_wash_sale": { "fecha_venta": "2025-03-03", "sin_efecto_desde": "2025-04-03" },
+      "aviso_fiscal": null
+    }
+  ]
+}
+```
 
 Detalle OpenAPI de los 3 principales:
 
@@ -1224,6 +1260,8 @@ Dada la estrategia seleccionada con 15 tickers abiertos con señal de Compra o V
 Cuando abro el panel de operaciones recomendadas
 Entonces veo las 10 de mayor intensidad, y a igual intensidad AAPL antes que MSFT
 Y una compra con precio 100 USD y ATR(14) de 2 USD tiene stop-loss 96 USD y objetivo 106 USD
+Y con una cartera de 10.000 USD y el riesgo del 1 % por defecto, esa compra sugiere 25 acciones (2.500 USD, 25,00 % de la cartera)
+Y una compra de TSLA vendida con pérdida el 2025-03-03 muestra un aviso de wash sale hasta el 2025-04-03
 Y una venta de MSFT con dos posiciones de 10 y 5 acciones indica 15 acciones
 Y una venta con una posición con ganancia a ≤ 30 días de Long-Term muestra un aviso con la fecha en que pasaría a Long-Term
 Y se muestra el aviso "Las señales son orientativas y no constituyen asesoramiento financiero"
