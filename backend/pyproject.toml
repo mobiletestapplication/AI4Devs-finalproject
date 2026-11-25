@@ -42,13 +42,16 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
 [tool.mypy]
 python_version = "3.12"
 strict = true
-packages = ["app"]
+files = ["app", "tests/trazabilidad.py"]
 plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+markers = [
+    "escenario(identificador): escenario capability::Requirement::Scenario que prueba el test (sección 2.6 del readme)",
+]
 
 [tool.coverage.run]
 source = ["app"]

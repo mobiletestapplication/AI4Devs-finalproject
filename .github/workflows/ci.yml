@@ -1,5 +1,5 @@
 # CI de trAIde (design O6 de ops-01-esqueleto; sección 2.4 del readme).
-# Los jobs e2e (QA-01) y release (REL-01) se añaden en sus tickets.
+# El job e2e (QA-01, parte 2) y release (REL-01) se añaden en sus tickets.
 name: CI
 
 on:
@@ -50,11 +50,23 @@ jobs:
           python-version: ${{ env.PYTHON_VERSION }}
           enable-cache: true
           cache-dependency-glob: backend/uv.lock
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - run: uv sync --frozen
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy
       - run: uv run lint-imports
+      - name: Lista de tests de Vitest (sin ejecutarlos)
+        working-directory: frontend
+        run: |
+          npm ci
+          npx vitest list --json="$RUNNER_TEMP/vitest.json"
+      - name: Trazabilidad escenario → test (QA-01)
+        run: uv run python tests/trazabilidad.py --vitest "$RUNNER_TEMP/vitest.json"
 
   backend-tests:
     name: backend-tests

@@ -1,0 +1,170 @@
+# Escenarios de las specs vivas que aún no tienen test, agrupados por el ticket que los
+# cubrirá (backlog de la sección 6 del readme; design T3 y T5 de qa-01-trazabilidad).
+#
+# El script tests/trazabilidad.py falla si un escenario no tiene test ni está aquí, si un
+# escenario de esta lista ya tiene test o si una entrada no coincide con ningún escenario.
+# Cada ticket quita sus escenarios en el mismo commit en el que añade sus tests; si solo
+# cubre parte de un patrón con "*", lo sustituye por los escenarios que siguen pendientes.
+#
+# Formatos: "capability::Requirement::Scenario", "capability::Requirement::*" y
+# "capability::*".
+
+# --- Entrega 2: flujo principal ------------------------------------------------------
+
+[SEC-01]
+# Rechazos que el middleware resuelve antes del enrutado: no necesitan la ruta.
+escenarios = [
+  "seguridad-api::Host admitido::DNS rebinding",
+  "seguridad-api::Origen de las peticiones que envían datos::Importación desde otra web",
+]
+
+[BE-01a]
+escenarios = [
+  "importacion-cartera::Rechazo de ficheros no válidos::Fichero que no es XLSX",
+  "importacion-cartera::Rechazo de ficheros no válidos::Fichero demasiado grande",
+  "importacion-cartera::Rechazo de ficheros comprimidos peligrosos::*",
+  "importacion-cartera::Rechazo de ficheros con contenido activo o no estándar::*",
+]
+
+[BE-01b]
+escenarios = [
+  "importacion-cartera::Formato del fichero de posiciones::*",
+  "importacion-cartera::Rechazo de ficheros no válidos::Falta una columna obligatoria",
+  "importacion-cartera::Rechazo de ficheros no válidos::Filas con datos incoherentes",
+  "importacion-cartera::Rechazo de ficheros no válidos::Venta incompleta",
+  "importacion-cartera::Rechazo de ficheros no válidos::Fechas futuras",
+  "importacion-cartera::Sustitución de la cartera::*",
+  "importacion-cartera::Límites de filas y de tiempo de análisis::*",
+  "importacion-cartera::Formato del ticker y de los precios::*",
+  "importacion-cartera::Mensajes de error sin eco del contenido::Valor largo en un error",
+  "importacion-cartera::Tipos de celda admitidos::*",
+  "importacion-cartera::Cantidades fraccionarias::*",
+  "importacion-cartera::Columnas adicionales y filas vacías::*",
+  "importacion-cartera::Precisión de los precios::*",
+  "importacion-cartera::Fichero sin filas de datos::*",
+  "seguridad-api::Origen de las peticiones que envían datos::Importación desde la propia aplicación",
+  "seguridad-api::Límite de frecuencia de las operaciones caras::Sexta importación en un minuto",
+]
+
+[BE-07]
+escenarios = [
+  "importacion-cartera::Consulta de posiciones::*",
+  "importacion-cartera::Precio de referencia::*",
+  "importacion-cartera::Rendimiento total::*",
+  "importacion-cartera::Clasificación de la plusvalía::*",
+  "seguridad-api::Límite de frecuencia de las operaciones caras::Consultas sin límite",
+]
+
+[FE-01]
+escenarios = [
+  "importacion-cartera::Carga del fichero en pantalla::*",
+  "importacion-cartera::Tabla Watchlist::*",
+  "importacion-cartera::Mensajes de error sin eco del contenido::Marcado en una celda",
+]
+
+# --- Entrega 2: backtesting ----------------------------------------------------------
+
+[BE-03]
+escenarios = [
+  "rentabilidad-twr::Flujos de caja de la cartera::*",
+  "rentabilidad-twr::Valoración diaria de la cartera::*",
+  "rentabilidad-twr::Rentabilidad diaria::*",
+  "rentabilidad-twr::TWR acumulada::*",
+  "rentabilidad-twr::TWR anualizada::*",
+  "rentabilidad-twr::TWR mensual y semanal::*",
+  "rentabilidad-twr::Consulta de la TWR por HTTP::*",
+  "rentabilidad-twr::Flujos en días sin sesión::*",
+  "rentabilidad-twr::TWR del índice de referencia::*",
+  "rentabilidad-twr::Curva de valor base 100::*",
+  "seguridad-api::Errores inesperados sin detalles internos::Excepción no controlada",
+]
+
+[BE-04]
+escenarios = [
+  "estrategias-indicador::Catálogo de estrategias::*",
+  "estrategias-indicador::Reglas de la estrategia RSI::*",
+  "estrategias-indicador::Reglas de la estrategia de cruce de medias::*",
+  "estrategias-indicador::Intensidad de la señal::*",
+  "estrategias-indicador::Señales actuales de la cartera::*",
+  "estrategias-indicador::Validación de la petición de señales::*",
+  "estrategias-indicador::Histórico de señales de un ticker::*",
+  "estrategias-indicador::Histórico mínimo de los indicadores::*",
+  "seguridad-api::Host admitido::Host local",
+  "seguridad-api::Validación de parámetros con 400::Tipo de parámetro no válido",
+]
+
+[BE-05]
+escenarios = [
+  "backtesting::Métricas de las operaciones reales::*",
+  "backtesting::Simulación de una estrategia::*",
+  "backtesting::Métricas de las estrategias simuladas::*",
+  "backtesting::Comparativa de resultados::*",
+  "backtesting::Propuestas de mejora::*",
+  "backtesting::Ejecución del backtest por HTTP::*",
+  "backtesting::Línea base de comprar y mantener::*",
+  "backtesting::Línea base del índice de referencia::*",
+  "backtesting::Volatilidad anualizada::*",
+  "backtesting::Ratio de Sharpe::*",
+  "backtesting::Ratio de Calmar::*",
+  "backtesting::Exposición::*",
+  "backtesting::Número de operaciones::*",
+  "backtesting::Criterio de ordenación de la comparativa::*",
+  "backtesting::Aviso de sesgo de selección::*",
+  "seguridad-api::Origen de las peticiones que envían datos::Cliente sin navegador",
+  "seguridad-api::Validación de parámetros con 400::Campo no admitido en el cuerpo",
+]
+
+[FE-03]
+escenarios = [
+  "estrategias-indicador::Selección de estrategia en pantalla::*",
+  "estrategias-indicador::Tabla y gráfico de señales en pantalla::*",
+]
+
+[FE-04]
+escenarios = [
+  "backtesting::Sección de backtesting en pantalla::*",
+  "backtesting::Métricas de riesgo en pantalla::*",
+  "seguridad-api::Límite de frecuencia de las operaciones caras::Límite en pantalla",
+]
+
+# --- Entrega 3 -----------------------------------------------------------------------
+
+[BE-08]
+escenarios = [
+  "importacion-cartera::Resumen de la cartera::*",
+  "importacion-cartera::Ganancias realizadas por año fiscal::*",
+  "importacion-cartera::Fecha de los datos de mercado::*",
+  "importacion-cartera::Consulta del resumen por HTTP::*",
+  "importacion-cartera::Cartera de ejemplo descargable::*",
+]
+
+[FE-06]
+escenarios = [
+  "importacion-cartera::Cabecera de resumen en pantalla::*",
+  "importacion-cartera::Descarga del ejemplo en pantalla::*",
+]
+
+[FE-02]
+escenarios = [
+  "rentabilidad-twr::Panel de rentabilidad en pantalla::*",
+]
+
+[BE-06]
+escenarios = [
+  "operaciones-recomendadas::Selección de las operaciones recomendadas::*",
+  "operaciones-recomendadas::Contenido de cada operación recomendada::*",
+  "operaciones-recomendadas::Stop-loss y objetivo de las compras::*",
+  "operaciones-recomendadas::Aviso fiscal en las ventas::*",
+  "operaciones-recomendadas::Consulta de recomendaciones por HTTP::*",
+  "operaciones-recomendadas::Cantidad sugerida de las compras::*",
+  "operaciones-recomendadas::Antigüedad de la señal::*",
+  "operaciones-recomendadas::Filtro por antigüedad de la señal::*",
+  "operaciones-recomendadas::Aviso de wash sale en las compras::*",
+  "operaciones-recomendadas::Parámetros de riesgo y antigüedad por HTTP::*",
+]
+
+[FE-05]
+escenarios = [
+  "operaciones-recomendadas::Panel de operaciones recomendadas en pantalla::*",
+  "operaciones-recomendadas::Cantidad, antigüedad y avisos en pantalla::*",
+]
