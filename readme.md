@@ -73,9 +73,9 @@ Cada funcionalidad tiene su especificación viva en `openspec/specs/<capability>
 | ID | Funcionalidad | Spec | Descripción |
 |---|---|---|---|
 | F1 | Importación y Watchlist con ST/LT | `importacion-cartera` | Carga de un XLSX de posiciones abiertas y cerradas en USD, validación completa (se rechaza el fichero entero si hay errores) y sustitución de la cartera única. Watchlist con precio de referencia (último cierre diario sin ajustar, con su fecha, si está abierta; precio de venta si está cerrada), rendimiento total en USD y % y clasificación **Short-Term** (tenencia ≤ 1 año) o **Long-Term** (> 1 año). |
-| F2 | TWR | `rentabilidad-twr` | Valoración diaria de la cartera al cierre de cada sesión, en la que las posiciones abiertas aportan su ganancia o pérdida no realizada hasta la última sesión con cierre disponible, y cálculo de la **Time-Weighted Rate of Return** tratando cada compra como aportación y cada venta como retirada. Salida: TWR acumulada, anualizada (no aplicable si el periodo < 365 días), mensual y por semana ISO. |
+| F2 | TWR | `rentabilidad-twr` | Valoración diaria de la cartera al cierre de cada sesión, en la que las posiciones abiertas aportan su ganancia o pérdida no realizada hasta la última sesión con cierre disponible, y cálculo de la **Time-Weighted Rate of Return** tratando cada compra como aportación y cada venta como retirada; un flujo fechado en un día sin sesión cuenta en la primera sesión posterior. Salida: TWR acumulada, anualizada (no aplicable si el periodo < 365 días), mensual y por semana ISO. |
 | F3 | Estrategias por indicador | `estrategias-indicador` | Catálogo de estrategias de un único indicador sobre cierres diarios: **`rsi`** (RSI de Wilder 14, sobreventa 30, sobrecompra 70) y **`cruce-medias`** (SMA 50 / SMA 200). Para cada ticker con posición abierta, cada una emite Compra, Venta o Mantener con una intensidad 0-100 (o "Sin datos suficientes" con intensidad 0 si el histórico no alcanza el mínimo: el periodo en las SMA y el periodo + 100 sesiones en el RSI, por ejemplo 114 sesiones para RSI(14)), con el valor del indicador, la fecha de la sesión usada y la fecha desde la que se mantiene la señal. También ofrece el histórico diario de cierre, indicador y señal de un ticker (por defecto, el último año) con las fechas de cambio de señal. La estrategia y sus parámetros elegidos se comparten con el resto del dashboard. |
-| F4 | Backtesting | `backtesting` | Simula la estrategia seleccionada con sus parámetros y el resto del catálogo con sus parámetros por defecto sobre los tickers de la cartera desde la primera compra real, con el máximo capital invertido simultáneamente repartido a partes iguales, solo largos, sin comisiones ni deslizamiento y ejecutando a la apertura de la sesión siguiente. Métricas, también para la cartera real con las posiciones abiertas valoradas al último cierre disponible: TWR acumulada y anualizada, máximo drawdown, % de aciertos, ganancia y pérdida media, factor de beneficio y duración media. Compara contra la cartera real y propone tres tipos de mejora: estrategias que superan a la cartera real (en pp), ventas con ganancia como Short-Term en los 30 días anteriores a pasar a Long-Term, y compras reales hechas mientras la estrategia seleccionada emitía Venta, con su resultado agregado. |
+| F4 | Backtesting | `backtesting` | Simula la estrategia seleccionada con sus parámetros y el resto del catálogo con sus parámetros por defecto sobre los tickers de la cartera desde la primera compra real, con el máximo capital invertido simultáneamente, medido a coste de compra, repartido a partes iguales, solo largos, sin comisiones ni deslizamiento y ejecutando a la apertura de la sesión siguiente. Métricas, también para la cartera real con las posiciones abiertas valoradas al último cierre disponible: TWR acumulada y anualizada, máximo drawdown, % de aciertos, ganancia y pérdida media, factor de beneficio y duración media. Compara contra la cartera real y propone tres tipos de mejora: estrategias que superan a la cartera real (en pp), ventas con ganancia como Short-Term en los 30 días anteriores a pasar a Long-Term, y compras reales hechas mientras la estrategia seleccionada emitía Venta, con su resultado agregado. |
 | F5 | Hasta 10 operaciones recomendadas | `operaciones-recomendadas` | Operaciones Comprar/Vender sobre los tickers con posición abierta, derivadas de las señales de la estrategia seleccionada (se excluyen las señales Mantener y "Sin datos suficientes", y las Compra de tickers sin histórico suficiente para el ATR(14), es decir, con menos de 114 sesiones), ordenadas por intensidad (empate: ticker alfabético), una por ticker. Cada una indica el precio de referencia (último cierre disponible), el motivo con el valor del indicador y los umbrales o medias de la estrategia, y la fecha de la sesión usada. Las compras incluyen stop-loss (precio − 2 × ATR 14) y objetivo (precio + 3 × ATR 14); las ventas incluyen la cantidad abierta y un aviso fiscal si una posición con ganancia está a ≤ 30 días de pasar a Long-Term. |
 
 **Should-have (opcional, sin spec todavía; se añadirán como *change* de OpenSpec si se abordan)**
@@ -425,11 +425,11 @@ flowchart LR
 | Job | Qué ejecuta |
 |---|---|
 | `openspec` | `openspec validate --changes --strict` y validación de las specs vivas |
-| `backend-calidad` | `uv sync --frozen`, `uv run ruff check`, `uv run mypy`, `uv run lint-imports` (import-linter) |
-| `backend-tests` | `uv run pytest`: unit, contract (proveedor de ficheros y TA-Lib) e integración con Testcontainers |
+| `backend-calidad` | `uv sync --frozen`, `uv run ruff check`, `uv run mypy`, `uv run lint-imports` (import-linter) y el script de trazabilidad escenario → test (`tests/trazabilidad.py`, sección 2.6) |
+| `backend-tests` | `uv run pytest`: unit, contract (proveedor de ficheros y TA-Lib) e integración con Testcontainers; cobertura de líneas ≥ 95 % en `domain/` y ≥ 85 % en el resto; sin tests marcados `red` |
 | `frontend` | eslint, `tsc`, vitest, build y comprobación de que los tipos generados desde el OpenAPI están al día |
 | `seguridad` | pip-audit (sobre `uv export`), `npm audit --audit-level=high`, gitleaks, bandit |
-| `e2e` | compose con `PROVEEDOR_PRECIOS=ficheros` y Playwright; depende de los tres jobs de código |
+| `e2e` | compose de tests con `PROVEEDOR_PRECIOS=ficheros` y `FECHA_ACTUAL_FIJA` (variable que solo existe en ese compose), y Playwright; depende de los tres jobs de código |
 | `release` | solo con etiquetas `v*` y todo lo anterior en verde |
 
 Un fallo de cualquier job bloquea el merge. **Testcontainers**, en lugar de un servicio de Actions, para que los tests de integración se ejecuten igual en local y en CI; **E2E con el proveedor de ficheros** para que no dependa de Yahoo ni falle de forma intermitente.
@@ -510,31 +510,94 @@ flowchart TD
 
 > Describe brevemente algunos de los tests realizados
 
-Estrategia planificada (no requerida en la Entrega 1; se implementa en Entregas 2 y 3). Los escenarios de cada `spec.md` se traducen a casos de test:
+Estrategia planificada (no requerida en la Entrega 1; los tests se escriben a partir de la Entrega 2, empezando por los de HU-1). Cada escenario WHEN/THEN de las specs tiene exactamente un test identificable, y el CI lo comprueba.
 
-- **Unitarios (dominio):**
-  - ST/LT: venta en el aniversario de la compra → Short-Term; al día siguiente → Long-Term (incluye años bisiestos).
-  - Rendimiento: ganancia no realizada en abiertas y pérdida realizada en cerradas.
-  - TWR: sesiones de compra, sin flujos y de venta; neutralidad frente a aportaciones (10 + 10 acciones → 21 %); no se anualiza un periodo < 365 días; semanas/meses parciales y sin inversión.
-  - Indicadores: intensidad de las señales (incluido el límite de 100); histórico mínimo: RSI(14) con 100 sesiones → "Sin datos suficientes" y con 114 → señal calculada; RSI(21) con 115 → "Sin datos suficientes"; `cruce-medias` 50/200 con 200 sesiones → señal calculada.
-  - Reloj fijo (puerto `Reloj`): los escenarios con fechas concretas ("compra hace 200 días", fechas futuras, aviso fiscal) se ejecutan con una fecha fija.
-  - Datos de mercado: reconstrucción del cierre sin ajustar con un split conocido (10:1 el 2024-06-10: cierre ajustado 120,00 el 2024-06-07 → 1.200,00 sin ajustar); descarte de la barra del día en curso antes de las 16:15 ET.
-  - Precisión: las rentabilidades se comparan con una tolerancia de 1e-9 y los importes (`Decimal`) de forma exacta.
-  - Backtest: reparto del capital, ejecución a la apertura de la sesión siguiente (anti *look-ahead*), calentamiento del indicador, máximo drawdown y factor de beneficio con casos calculados a mano.
-  - Recomendaciones: máximo 10, empate por ticker alfabético, stop-loss/objetivo por ATR y aviso fiscal a ≤ 30 días de Long-Term; una Compra de `cruce-medias` 20/100 con 105 sesiones (menos de las 114 del ATR(14)) no se recomienda y una Venta con menos de 114 sesiones sí.
+**Pirámide y nivel de cada escenario.** Un escenario se prueba en el nivel más bajo que puede observar su THEN. Los escenarios HTTP que también incluyen un cálculo se prueban en los dos niveles: en integración solo se comprueban el código y la forma de la respuesta.
+
+| El escenario describe… | Nivel | Herramienta | Volumen aproximado |
+|---|---|---|---|
+| un cálculo de dominio | Unitario | pytest con datos en memoria | ~90 |
+| un adaptador frente a datos externos | Contrato | pytest con fixtures de referencia | ~15 |
+| una petición y su respuesta HTTP | Integración | pytest + httpx + Testcontainers (`postgres:16`) | ~60 |
+| lo que la persona ve | Componente | Vitest + Testing Library + MSW | ~45 |
+| un recorrido de varias pantallas | E2E | Playwright contra `docker compose` | ~10 |
+| **Total** | | | **~220** |
+
+**Trazabilidad automática escenario → test.** Cada test cita su escenario como `capability::Requirement::Scenario`:
+- en pytest, `@pytest.mark.escenario("importacion-cartera::Clasificación de la plusvalía::Compra un 29 de febrero")`;
+- en Vitest y Playwright, el mismo identificador al principio del título del test.
+
+El script `tests/trazabilidad.py` lee `openspec/specs/**/spec.md` y la lista de tests recogidos (`pytest --collect-only` y los informes JSON de Vitest y Playwright), y **falla si un escenario no tiene test o si un test cita un escenario inexistente**. Se ejecuta en el job `backend-calidad` del CI. Al aplicar un change se añaden los tests de sus deltas; al archivarlo, el script los exige. Si se renombra un escenario, el script indica el más parecido y el test se renombra en el mismo change.
+
+**Determinismo:**
+- **Reloj:** el puerto `Reloj` va fijo en unitarios e integración. En E2E, la variable `FECHA_ACTUAL_FIJA` solo existe en el compose de tests; el adaptador del reloj la ignora fuera de ese entorno y la API no arranca si aparece en el modo demo.
+- **Precios:** proveedor de ficheros CSV en integración y E2E. Para los errores, un proveedor *fake* con los modos `normal`, `caido` y `ticker_sin_datos`, que cuenta las llamadas para probar la caché.
+- **Tolerancias:** rentabilidades e indicadores con `pytest.approx(abs=1e-9)` (TA-Lib frente a referencias, 1e-6); importes `Decimal` comparados de forma exacta.
+- **Aislamiento de la BD:** un contenedor por sesión de pytest, migrado con `alembic upgrade head`, y cada test en una transacción que se revierte.
+- **Orden:** `pytest-randomly` para detectar dependencias ocultas entre tests.
+
+**Unitarios (dominio)**, con los ejemplos de cada escenario y además:
+- **ST/LT:** venta en el aniversario de la compra → Short-Term y al día siguiente → Long-Term; compra el 2024-02-29 → Short-Term si se vende el 2025-02-28 y Long-Term el 2025-03-01; compra el 2023-02-28 → Short-Term el 2024-02-28 y Long-Term el 2024-02-29.
+- **Rendimiento:** ganancia no realizada en abiertas y pérdida realizada en cerradas.
+- **TWR:** sesiones de compra, sin flujos y de venta; neutralidad frente a aportaciones (10 + 10 acciones → 21 %); compra en sábado → aportación del lunes y 5 % esa sesión; venta en domingo → retirada del lunes y 1,82 %; no se anualiza un periodo < 365 días; semanas y meses parciales y sin inversión.
+- **TWR neutral frente a aportaciones (propiedad, Hypothesis):** con una serie de precios y aportaciones aleatorias, multiplicar todas las cantidades por k > 0, o cambiar el importe de las compras posteriores manteniendo los precios, no cambia la TWR.
+- **Indicadores:** intensidad de las señales (incluido el límite de 100); histórico mínimo: RSI(14) con 100 sesiones → "Sin datos suficientes" y con 114 → señal calculada; RSI(21) con 115 → "Sin datos suficientes"; `cruce-medias` 50/200 con 200 sesiones → señal calculada.
+- **Fronteras de las reglas:** RSI = 30 → Mantener; medias iguales → Mantener; 30 días exactos hasta Long-Term → con aviso fiscal.
+- **Backtest:** capital inicial a coste de compra (A 6.000 USD y B 4.000 USD abiertas a la vez entre marzo y junio, C 5.000 USD después → 10.000 USD, sin depender de la revalorización); reparto del capital; calentamiento del indicador; máximo drawdown y factor de beneficio calculados a mano.
+- **Backtest sin sesgo de anticipación:** señal al cierre de t a 100 y apertura de t+1 a 101 → compra a 101; **propiedad de invariancia de prefijo:** simular con la serie completa y con la serie recortada en el día d da las mismas decisiones hasta d.
+- **Recomendaciones:** máximo 10, empate por ticker alfabético, stop-loss y objetivo por ATR y aviso fiscal a ≤ 30 días de Long-Term; una Compra de `cruce-medias` 20/100 con 105 sesiones (menos de las 114 del ATR(14)) no se recomienda y una Venta con menos de 114 sesiones sí.
+- **Datos de mercado:** descarte de la barra del día en curso antes de las 16:15 ET.
 - **Arquitectura:** contrato de import-linter en CI (el dominio no importa adaptadores, TA-Lib ni infraestructura).
-- **Contrato (`tests/contract/`):**
-  - Proveedor de precios: la misma batería contra el proveedor de ficheros siempre y contra yfinance solo si se activa expresamente, fuera del CI normal.
-  - TA-Lib: RSI(14) y ATR(14) contra los valores de referencia publicados por StockCharts ChartSchool con tolerancia de 1e-6, más una implementación mínima de Wilder **solo en los tests** como oráculo independiente.
-- **Integración:** API + PostgreSQL con Testcontainers (igual en local y en CI) y el proveedor de ficheros — subir XLSX de fixture → persistencia → `GET /api/cartera/posiciones`; segunda importación sustituye a la primera; códigos `409`/`422`/`503`; con el proveedor caído, `200` si la caché cubre el rango (aunque esté desactualizada) y `503` con `Retry-After` si no lo cubre.
-- **E2E (Playwright), con `PROVEEDOR_PRECIOS=ficheros`:** subir cartera de ejemplo → ver Watchlist → ver TWR → elegir estrategia y ver señales → ejecutar backtest → ver operaciones recomendadas.
-- **Seguridad: fixtures maliciosos** (escenarios de `importacion-cartera`), cada uno con la cartera anterior intacta:
-  - zip bomb de 200 KB que declara 2 GB → `413`; 300 KB que se descomprimen en 40 MB (proporción > 100:1) → `413`; 1.500 entradas en el ZIP → `413`;
-  - `cartera.xlsx` con `xl/vbaProject.bin` → `415`; primeros bytes OLE `D0 CF 11 E0` → `415`; `<!DOCTYPE` con entidad a `file:///etc/passwd` → `415` sin resolverla; carpeta `xl/externalLinks/` → `415`; fichero CSV → `415`;
-  - 10.001 filas de datos → `422` y 10.000 → `201`; ticker `=HYPERLINK("http://x","AAPL")` en la fila 3 → `422`; precio de compra 0 y de venta −10 → `422`; fórmula sin valor calculado → `422`;
-  - ticker de 500 caracteres → el error incluye solo 20 caracteres y `…`; ticker `<img src=x onerror=alert(1)>` → el E2E comprueba que se ve como texto literal y no se ejecuta ningún `alert`.
-- **Seguridad: API** (escenarios de `seguridad-api`): `Host: atacante.example:8080` → `400`; `Origin: https://atacante.example` en la importación → `403`; `POST /api/backtests` sin `Origin` ni `Sec-Fetch-Site` → aceptado; sexta importación en un minuto → `429` con `Retry-After`; 100 `GET /api/cartera/posiciones` en un minuto → ningún `429`; periodo `abc` → `400`; campo `comision` en el backtest → `400`; excepción forzada en la TWR → `500` en `problem+json` con identificador de incidencia y sin traza.
-- **LLM (S1, si se implementa):** respuestas simuladas para tests deterministas; validación de estructura/campos obligatorios en salidas reales.
+
+**Contrato (`tests/contract/`):**
+- Proveedor de precios: la misma batería contra el proveedor de ficheros siempre y contra yfinance solo con `pytest -m red`, nunca en el CI normal.
+- TA-Lib: RSI(14) y ATR(14) contra los valores de referencia publicados por StockCharts ChartSchool con tolerancia de 1e-6, más una implementación mínima de Wilder **solo en los tests** como oráculo independiente.
+- Reconstrucción del cierre sin ajustar con un split 10:1 el 2024-06-10: cierre ajustado 120,00 el 2024-06-07 → 1.200,00 sin ajustar.
+
+**Integración:** API + PostgreSQL con Testcontainers (igual en local y en CI) y el proveedor de ficheros; un test por escenario HTTP de cada spec (subida del XLSX → persistencia → `GET /api/cartera/posiciones`, segunda importación que sustituye a la primera, códigos `409`/`422`/`503`…). Además, cuatro casos de arquitectura que no salen de ningún escenario:
+- atomicidad de la sustitución, forzando un error a mitad de la inserción;
+- la caché evita una segunda llamada al proveedor;
+- con el proveedor caído, `200` si la caché cubre el rango (aunque esté desactualizada) y `503` con `Retry-After` si no lo cubre;
+- la barra del día en curso no se guarda.
+
+**E2E (Playwright)**, contra `docker compose` con `PROVEEDOR_PRECIOS=ficheros` y `FECHA_ACTUAL_FIJA`, un recorrido por historia de usuario:
+1. estado vacío;
+2. carga correcta con la Watchlist;
+3. rentabilidad;
+4. estrategias con el gráfico de un ticker;
+5. backtest;
+6. recomendaciones con el aviso legal;
+7. errores por fila con la cartera anterior intacta;
+8. confirmación de sustitución.
+
+Traza, vídeo y capturas se guardan como artefactos del CI cuando falla.
+
+**Seguridad: fixtures maliciosos**, generados en tiempo de test por `tests/fixtures/generar.py` (no se versionan binarios, que los antivirus del CI marcarían). Cada rechazo deja la cartera anterior intacta:
+
+| Fixture | Respuesta esperada |
+|---|---|
+| Fichero de más de 5 MB | `413` |
+| Zip bomb de 200 KB que declara 2 GB | `413`, sin descomprimir (memoria máxima < 100 MB) |
+| 300 KB que se descomprimen en 40 MB (proporción > 100:1) | `413` |
+| 1.500 entradas en el ZIP | `413` |
+| `cartera.xlsx` con `xl/vbaProject.bin` | `415` |
+| Primeros bytes OLE `D0 CF 11 E0` | `415` |
+| `<!DOCTYPE` con entidad a `file:///etc/passwd` | `415`, sin resolverla ni devolver contenido del servidor |
+| Carpeta `xl/externalLinks/` | `415` |
+| Fichero CSV renombrado | `415` |
+| 10.001 filas de datos | `422` |
+| 10.000 filas de datos | `201` |
+| Ticker `=HYPERLINK("http://x","AAPL")` en la fila 3 | `422` con error en la fila 3 |
+| Precio de compra 0 y de venta −10 | `422` con un error por fila |
+| Fórmula sin valor calculado en la cantidad | `422` por cantidad vacía |
+| Ticker de 500 caracteres | `422`; el error incluye solo 20 caracteres y `…` |
+| Ticker `<img src=x onerror=alert(1)>` | `422`; el E2E comprueba que se ve como texto literal y no se ejecuta ningún `alert` |
+
+**Seguridad: API** (escenarios de `seguridad-api`): `Host: atacante.example:8080` → `400`; `Origin: https://atacante.example` en la importación → `403`; `POST /api/backtests` sin `Origin` ni `Sec-Fetch-Site` → aceptado; sexta importación en un minuto → `429` con `Retry-After`; 100 `GET /api/cartera/posiciones` en un minuto → ningún `429`; periodo `abc` → `400`; campo `comision` en el backtest → `400`; excepción forzada en la TWR → `500` en `problem+json` con identificador de incidencia y sin traza.
+
+**LLM (S1, si se implementa):** respuestas simuladas para tests deterministas; validación de estructura y campos obligatorios en salidas reales.
+
+**Umbrales del CI:** cobertura de líneas ≥ 95 % en `domain/` y ≥ 85 % en el resto del backend; script de trazabilidad en verde; sin tests marcados `red` en el pipeline normal. Los umbrales de cobertura no garantizan aserciones útiles; la trazabilidad por escenario lo compensa en parte.
 
 ### **2.7. Stack tecnológico**
 
@@ -641,11 +704,13 @@ Cabeceras sin importar orden ni mayúsculas; importes en USD.
 
 **Fórmulas clave (contrato del dominio)**
 - Rendimiento total: `(precio_ref − precio_compra) × cantidad` USD y `(precio_ref ÷ precio_compra − 1) × 100` %.
-- Long-Term si entre la compra y la venta (o hoy) ha pasado **más de un año** natural: comprada el 2024-01-10, es Short-Term si se vende el 2025-01-10 y Long-Term desde el 2025-01-11.
+- Long-Term si entre la compra y la venta (o hoy) ha pasado **más de un año** natural: comprada el 2024-01-10, es Short-Term si se vende el 2025-01-10 y Long-Term desde el 2025-01-11. El aniversario de una compra hecha un 29 de febrero es el 28 de febrero: comprada el 2024-02-29, es Long-Term desde el 2025-03-01; comprada el 2023-02-28, es Long-Term desde el 2024-02-29.
+- Flujos en días sin sesión: una compra o una venta fechada en fin de semana o festivo se asigna a la primera sesión posterior con datos, tanto para la aportación o retirada como para empezar o dejar de valorar la posición (compra el sábado 2025-03-08 → aportación del lunes 2025-03-10).
 - Rentabilidad diaria: `r_t = (V_t + S_t − V_{t−1} − B_t) ÷ (V_{t−1} + B_t)`, con `V` el valor al cierre, `B` las compras y `S` las ventas de la sesión; se excluyen sesiones con denominador 0.
 - TWR acumulada: `Π(1 + r_t) − 1`; mensual y semanal: encadenado dentro de cada mes natural (`AAAA-MM`) y semana ISO (`AAAA-Www`).
 - TWR anualizada: `(1 + TWR)^(365 / D) − 1`, solo si `D ≥ 365` días.
 - Intensidad `rsi`: `(sobreventa − RSI) ÷ sobreventa × 100` (Compra), `(RSI − sobrecompra) ÷ (100 − sobrecompra) × 100` (Venta). Intensidad `cruce-medias`: `min(100, |SMA_corta − SMA_larga| ÷ SMA_larga × 1000)`.
+- Capital inicial del backtest: el máximo capital invertido simultáneamente en la cartera real, **medido a coste de compra** (Σ cantidad × precio de compra de las posiciones abiertas a la vez), sin depender de la revalorización; se reparte a partes iguales entre los tickers.
 - Compras recomendadas: stop-loss `precio − 2 × ATR(14)`, objetivo `precio + 3 × ATR(14)`.
 - Histórico mínimo de los indicadores: el periodo en las SMA y `periodo + 100` sesiones en el RSI y el ATR de Wilder (114 para RSI(14) y ATR(14)).
 - Cierre sin ajustar: `cierre_sin_ajustar = cierre × F(fecha)`, donde `F(fecha)` es el producto de las proporciones de los splits posteriores a esa fecha. Ejemplo: split 10:1 el 2024-06-10; el cierre ajustado del 2024-06-07 es 120,00, luego el sin ajustar es 1.200,00. Después del último split las dos series coinciden.
@@ -928,6 +993,7 @@ Entonces se importan 3 posiciones, 2 abiertas y 1 cerrada
 Y veo en la Watchlist una fila por posición con precio de referencia, rendimiento USD y % y plusvalía
 Y una posición comprada el 2024-01-10 y vendida el 2025-01-10 se marca Short-Term
 Y una vendida el 2025-01-11 se marca Long-Term
+Y una posición comprada el 2024-02-29 se marca Short-Term si se vendió el 2025-02-28 y Long-Term si se vendió el 2025-03-01
 
 Dado un XLSX con cantidad 0 en la fila 4 y una fecha de venta anterior a la de compra en la fila 7
 Cuando lo subo
@@ -955,6 +1021,12 @@ Cuando consulto la rentabilidad
 Entonces la TWR acumulada es 21 %, igual a la revalorización de la acción
 Y veo barras de TWR por mes y por semana ISO, con los periodos parciales marcados
 Y si el periodo es menor de 365 días la TWR anualizada se muestra como "No aplicable (periodo inferior a un año)"
+
+Dada una cartera vacía y una compra de 10 acciones a 100 USD fechada el sábado 2025-03-08
+Y un cierre de 105 USD el lunes 2025-03-10
+Cuando consulto la rentabilidad
+Entonces la compra cuenta como aportación de 1.000 USD del lunes 2025-03-10
+Y la rentabilidad de esa sesión es 5 %
 ```
 Prioridad: Must · Estimación: 8 SP
 
@@ -975,6 +1047,10 @@ Prioridad: Must · Estimación: 5 SP
 > **Como** inversor, **quiero** simular las estrategias sobre el mismo periodo y tickers que mi cartera y compararlas con mis operaciones reales, **para** saber si una aproximación sistemática habría superado mis decisiones y qué podría mejorar.
 
 ```gherkin
+Dada una posición A que costó 6.000 USD abierta del 2024-01-10 al 2024-06-30, una B que costó 4.000 USD abierta del 2024-03-01 al 2024-12-31 y una C que costó 5.000 USD abierta desde el 2024-07-01
+Cuando ejecuto el backtest
+Entonces el capital inicial de las simulaciones es 10.000 USD, la suma de A y B a coste de compra, sin depender de su revalorización
+
 Dada una cartera cuyo máximo capital invertido a la vez fue 10.000 USD en 4 tickers
 Cuando ejecuto el backtest con la estrategia RSI seleccionada
 Entonces cada estrategia se simula con 2.500 USD por ticker, ejecutando a la apertura de la sesión siguiente a la señal
