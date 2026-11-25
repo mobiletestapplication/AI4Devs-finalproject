@@ -73,10 +73,10 @@ Cada funcionalidad tiene su especificación viva en `openspec/specs/<capability>
 | ID | Funcionalidad | Spec | Descripción |
 |---|---|---|---|
 | F1 | Importación y Watchlist con ST/LT | `importacion-cartera` | Carga de un XLSX de posiciones abiertas y cerradas en USD, validación completa (se rechaza el fichero entero si hay errores) y sustitución de la cartera única. Watchlist con precio de referencia (última cotización si está abierta, precio de venta si está cerrada), rendimiento total en USD y % y clasificación **Short-Term** (tenencia ≤ 1 año) o **Long-Term** (> 1 año). |
-| F2 | TWR | `rentabilidad-twr` | Valoración diaria de la cartera al cierre de cada sesión y cálculo de la **Time-Weighted Rate of Return** tratando cada compra como aportación y cada venta como retirada. Salida: TWR acumulada, anualizada (no aplicable si el periodo < 365 días), mensual y por semana ISO. |
-| F3 | Estrategias por indicador | `estrategias-indicador` | Catálogo de estrategias de un único indicador sobre cierres diarios: **`rsi`** (RSI de Wilder 14, sobreventa 30, sobrecompra 70) y **`cruce-medias`** (SMA 50 / SMA 200). Cada una emite Compra, Venta o Mantener con una intensidad 0-100 para cada ticker con posición abierta. La estrategia y sus parámetros elegidos se comparten con el resto del dashboard. |
-| F4 | Backtesting | `backtesting` | Simula todas las estrategias del catálogo sobre los tickers de la cartera desde la primera compra real, con el máximo capital invertido simultáneamente repartido a partes iguales, solo largos, sin comisiones ni deslizamiento y ejecutando a la apertura de la sesión siguiente. Métricas: TWR acumulada y anualizada, máximo drawdown, % de aciertos, ganancia y pérdida media, factor de beneficio y duración media. Compara contra la cartera real y propone mejoras. |
-| F5 | Hasta 10 operaciones recomendadas | `operaciones-recomendadas` | Operaciones Comprar/Vender derivadas de las señales de la estrategia seleccionada, ordenadas por intensidad (empate: ticker alfabético), una por ticker. Las compras incluyen stop-loss (precio − 2 × ATR 14) y objetivo (precio + 3 × ATR 14); las ventas incluyen la cantidad abierta y un aviso fiscal si una posición con ganancia está a ≤ 30 días de pasar a Long-Term. |
+| F2 | TWR | `rentabilidad-twr` | Valoración diaria de la cartera al cierre de cada sesión, en la que las posiciones abiertas aportan su ganancia o pérdida no realizada hasta la última sesión con cierre disponible, y cálculo de la **Time-Weighted Rate of Return** tratando cada compra como aportación y cada venta como retirada. Salida: TWR acumulada, anualizada (no aplicable si el periodo < 365 días), mensual y por semana ISO. |
+| F3 | Estrategias por indicador | `estrategias-indicador` | Catálogo de estrategias de un único indicador sobre cierres diarios: **`rsi`** (RSI de Wilder 14, sobreventa 30, sobrecompra 70) y **`cruce-medias`** (SMA 50 / SMA 200). Para cada ticker con posición abierta, cada una emite Compra, Venta o Mantener con una intensidad 0-100 (o "Sin datos suficientes" con intensidad 0 si el histórico no alcanza), con el valor del indicador, la fecha de la sesión usada y la fecha desde la que se mantiene la señal. También ofrece el histórico diario de cierre, indicador y señal de un ticker (por defecto, el último año) con las fechas de cambio de señal. La estrategia y sus parámetros elegidos se comparten con el resto del dashboard. |
+| F4 | Backtesting | `backtesting` | Simula la estrategia seleccionada con sus parámetros y el resto del catálogo con sus parámetros por defecto sobre los tickers de la cartera desde la primera compra real, con el máximo capital invertido simultáneamente repartido a partes iguales, solo largos, sin comisiones ni deslizamiento y ejecutando a la apertura de la sesión siguiente. Métricas, también para la cartera real con las posiciones abiertas valoradas al último cierre disponible: TWR acumulada y anualizada, máximo drawdown, % de aciertos, ganancia y pérdida media, factor de beneficio y duración media. Compara contra la cartera real y propone tres tipos de mejora: estrategias que superan a la cartera real (en pp), ventas con ganancia como Short-Term en los 30 días anteriores a pasar a Long-Term, y compras reales hechas mientras la estrategia seleccionada emitía Venta, con su resultado agregado. |
+| F5 | Hasta 10 operaciones recomendadas | `operaciones-recomendadas` | Operaciones Comprar/Vender sobre los tickers con posición abierta, derivadas de las señales de la estrategia seleccionada (las señales Mantener y "Sin datos suficientes" se excluyen), ordenadas por intensidad (empate: ticker alfabético), una por ticker. Cada una indica el precio de referencia (último cierre disponible), el motivo con el valor del indicador y los umbrales o medias de la estrategia, y la fecha de la sesión usada. Las compras incluyen stop-loss (precio − 2 × ATR 14) y objetivo (precio + 3 × ATR 14); las ventas incluyen la cantidad abierta y un aviso fiscal si una posición con ganancia está a ≤ 30 días de pasar a Long-Term. |
 
 **Should-have (opcional, sin spec todavía; se añadirán como *change* de OpenSpec si se abordan)**
 - S1: Justificación en lenguaje natural de cada recomendación generada por LLM con salida estructurada (JSON validado), sin influir en el orden de las recomendaciones.
@@ -100,11 +100,11 @@ Cada funcionalidad tiene su especificación viva en `openspec/specs/<capability>
 
 Dashboard de una sola página con secciones (wireframes a generar en la Entrega 2):
 
-1. **Carga y Watchlist (F1)** — sin cartera, mensaje de bienvenida y control para seleccionar o arrastrar el `.xlsx`. Con cartera, aviso de sustitución antes de importar otro fichero. Errores de validación con número de fila y motivo. Tabla ordenable por cualquier columna y filtrable (abiertas / cerradas / todas): Ticker, Estado, Cantidad, Precio de compra, Precio de referencia, Rendimiento USD, Rendimiento %, Plusvalía (etiqueta `Short-Term`/`Long-Term`). Rendimientos en verde con `+` o en rojo con `−`; `—` con el motivo al pasar el cursor si no hay cotización.
-2. **Rentabilidad (F2)** — TWR acumulada y anualizada (o "No aplicable (periodo inferior a un año)") con su periodo y una ayuda sobre qué mide la TWR; selector Mensual/Semanal con gráfico de barras (verde/rojo, marca en periodos parciales) y tabla.
-3. **Estrategias (F3)** — selector de estrategia con sus parámetros (validados antes de calcular) y descripción de reglas; tabla de señales por ticker (Compra verde, Venta roja, Mantener gris, "Sin datos suficientes" atenuada) con intensidad, valor del indicador y fecha desde la que se mantiene; al pulsar un ticker, gráfico del precio del último año con el indicador en un panel inferior y marcas en los cambios de señal.
-4. **Backtesting (F4)** — botón "Ejecutar backtest" con progreso; tabla comparativa (cartera real + cada estrategia, mejor fila destacada), curvas base 100 superpuestas que se pueden ocultar desde la leyenda, propuestas de mejora y operaciones simuladas de la estrategia elegida.
-5. **Operaciones recomendadas (F5)** — lista numerada con ticker, etiqueta Comprar/Vender, intensidad como barra, precio de referencia, motivo y, en compras, stop-loss y objetivo; icono de aviso fiscal en ventas; fecha de la sesión usada.
+1. **Carga y Watchlist (F1)** — sin cartera, mensaje de bienvenida y control para seleccionar o arrastrar el `.xlsx`. Con cartera, aviso de sustitución antes de importar otro fichero, que solo se importa si se confirma. Durante la carga, indicador de progreso y después mensaje de éxito con el número de posiciones importadas. Si hay errores de validación, lista con número de fila y motivo, y la Watchlist sigue mostrando la cartera anterior. Tabla ordenable por cualquier columna y filtrable (abiertas / cerradas / todas): Ticker, Estado, Cantidad, Precio de compra, Precio de referencia, Rendimiento USD, Rendimiento %, Plusvalía (etiqueta `Short-Term`/`Long-Term`). Rendimientos en verde con `+` o en rojo con `−`; `—` con el motivo al pasar el cursor si no hay cotización.
+2. **Rentabilidad (F2)** — TWR acumulada y anualizada (o "No aplicable (periodo inferior a un año)") en porcentaje con dos decimales, con las fechas de inicio y fin y una ayuda sobre qué mide la TWR; selector Mensual/Semanal con gráfico de barras (verde/rojo, marca en periodos parciales) y tabla. Tras importar una nueva cartera, el panel se recalcula sin recargar la página.
+3. **Estrategias (F3)** — selector de estrategia con sus parámetros y descripción de reglas (un valor no válido muestra un error junto al campo y no se recalculan las señales hasta corregirlo); tabla de señales por ticker (Compra verde, Venta roja, Mantener gris, "Sin datos suficientes" atenuada) con intensidad, valor del indicador y fecha desde la que se mantiene; al pulsar un ticker, gráfico del precio del último año con el indicador en un panel inferior, junto con los umbrales o las medias de la estrategia, y marcas de Compra y Venta en los cambios de señal.
+4. **Backtesting (F4)** — botón "Ejecutar backtest" con indicador de progreso, deshabilitado hasta que termina el cálculo; tabla comparativa (cartera real y cada estrategia) con TWR acumulada y anualizada, máximo drawdown, % de aciertos y factor de beneficio, ordenada según la comparativa y con la mejor fila destacada; curvas base 100 superpuestas que se pueden ocultar desde la leyenda; propuestas de mejora en lenguaje claro y operaciones simuladas de la estrategia elegida. Si fallan los datos de mercado, mensaje que explica el problema con la opción de reintentar.
+5. **Operaciones recomendadas (F5)** — lista numerada con ticker, etiqueta Comprar (verde) o Vender (rojo), intensidad como barra, precio de referencia, motivo y, en compras, stop-loss y objetivo; fecha de la sesión usada. Se recalcula al cambiar la estrategia o sus parámetros, indicando la estrategia aplicada. Con menos de 10 operaciones, mensaje que explica que el resto de tickers tiene señal Mantener o sin datos suficientes; sin ninguna, mensaje de que no hay operaciones recomendadas para esa estrategia hoy. Icono de aviso fiscal en ventas que, al pasar el cursor o pulsarlo, muestra la fecha a partir de la cual la posición pasaría a Long-Term.
 
 Avisos permanentes: "Las señales son orientativas y no constituyen asesoramiento financiero" (F3 y F5) y "Las rentabilidades pasadas no garantizan rentabilidades futuras" (F4).
 
@@ -167,7 +167,7 @@ flowchart LR
 |---|---|---|
 | Frontend SPA | React 18, TypeScript, Vite, TanStack Query/Table, Recharts, Lightweight Charts | UI, carga del fichero, tablas, gráficos y estrategia seleccionada compartida entre secciones |
 | API REST | FastAPI, Pydantic v2, Uvicorn | Validación de entrada/salida, OpenAPI autogenerado |
-| Ingesta XLSX | openpyxl (`read_only`, `data_only`) + defusedxml | Parseo seguro, cabeceras sin importar orden ni mayúsculas, validación por fila (cantidad y precios > 0, fechas no futuras, venta ≥ compra, venta completa) |
+| Ingesta XLSX | openpyxl (`read_only`, `data_only`) + defusedxml | Parseo seguro, cabeceras sin importar orden ni mayúsculas, validación por fila (cantidad > 0, fechas no futuras, venta ≥ compra, venta completa; precios > 0 como *control de diseño, pendiente de spec*) |
 | Motor de posiciones | Python puro | Precio de referencia, rendimiento total, días de tenencia y plusvalía ST/LT |
 | Motor TWR | pandas | Valoración diaria, rentabilidad diaria con aportaciones y retiradas, encadenado acumulado, anualizado, mensual y semanal ISO |
 | Indicadores y estrategias | pandas (implementación propia validada contra valores de referencia) | RSI de Wilder, SMA, ATR de Wilder; reglas e intensidad de `rsi` y `cruce-medias` |
@@ -250,17 +250,19 @@ El vector de ataque principal es la **subida de ficheros**. Controles previstos:
 
 | Riesgo | Control |
 |---|---|
-| Fichero malicioso disfrazado | Validación de extensión **y** *magic bytes* (ZIP `PK\x03\x04`) y estructura OOXML; se rechaza `.xlsm` y cualquier `vbaProject.bin` → `415` |
-| Zip bomb / DoS | Límite de tamaño (5 MB → `413`), límite de tamaño descomprimido y nº de entradas del ZIP, máx. 10 000 filas, timeout de parseo |
+| Fichero malicioso disfrazado | Validación de extensión **y** *magic bytes* (ZIP `PK\x03\x04`) y estructura OOXML; un fichero que no es XLSX → `415`. Rechazo de `.xlsm` y de cualquier `vbaProject.bin` *(control de diseño, pendiente de spec)* |
+| Zip bomb / DoS | Límite de tamaño (5 MB → `413`). Límite de tamaño descomprimido y nº de entradas del ZIP, máx. 10 000 filas y timeout de parseo *(control de diseño, pendiente de spec)* |
 | XXE / entidades XML | `defusedxml` instalado (openpyxl lo usa automáticamente) |
 | Fórmulas / CSV injection | Lectura con `data_only=True`; valores que empiezan por `= + - @` se tratan como texto y se escapan en cualquier exportación |
 | Path traversal | Nunca se usa el nombre original para escribir en disco; procesamiento en memoria; se guarda solo el SHA-256 |
-| Validación de datos | Esquema estricto con Pydantic (tipos, cantidad y precios > 0, tickers normalizados a mayúsculas y validados con `^[A-Z.\-]{1,10}$`, fechas no futuras, venta ≥ compra); todo o nada: un error rechaza el fichero sin tocar la cartera existente |
+| Validación de datos | Esquema estricto con Pydantic (tipos, cantidad > 0, tickers normalizados a mayúsculas, fechas no futuras, venta ≥ compra, venta completa) → `422`; todo o nada: un error rechaza el fichero sin tocar la cartera existente. Precios > 0 y patrón de ticker `^[A-Z.\-]{1,10}$` *(control de diseño, pendiente de spec)* |
 | Acceso sin autenticación | Cartera única sin identificadores en la API; un despliegue público requiere autenticación (backlog) |
 | Abuso de API | Rate limiting (`slowapi`), CORS restringido al origen del frontend, cabeceras de seguridad (CSP, X-Content-Type-Options) |
 | Secretos | Ninguno en el repo; `.env.example` con variables vacías; `gitleaks` en pre-commit y CI |
 | Dependencias | Dependabot + `pip-audit` + `npm audit`; SAST con Bandit/Semgrep |
 | Prompt injection (S1) | Los campos del XLSX nunca se envían como instrucciones al LLM; salida JSON validada contra esquema; el LLM no decide qué operaciones se recomiendan |
+
+*Control de diseño, pendiente de spec:* regla prevista en el diseño que todavía no forma parte de los requisitos observables de `importacion-cartera`. Por eso no se le asigna un código HTTP propio; se formalizará con un change de OpenSpec si se quiere garantizar con un código y un escenario.
 
 
 ### **2.6. Tests**
@@ -401,7 +403,17 @@ Endpoints del MVP (base `/api`, cartera única sin identificador):
 | POST | `/backtests` | F4 |
 | GET | `/recomendaciones?estrategia={id}` | F5 |
 
-Códigos comunes: `409 Conflict` si no hay cartera importada (salvo `GET /cartera/posiciones`, que devuelve una lista vacía), `503 Service Unavailable` si el proveedor de mercado no responde, `404` para una estrategia inexistente y `400` para parámetros fuera de rango o incoherentes.
+Códigos comunes:
+- **`409 Conflict`** si no hay cartera importada, en `GET /cartera/rentabilidad/twr`, `GET /estrategias/{id}/senales`, `POST /backtests` y `GET /recomendaciones`. Sin cartera, `GET /cartera/posiciones` responde `200` con una lista vacía, y `GET /estrategias` (catálogo) no depende de la cartera.
+- **`503 Service Unavailable`** si no se pueden obtener precios del proveedor de mercado, en esos mismos cuatro endpoints. `GET /cartera/posiciones` no responde `503`: degrada por posición y devuelve cada posición abierta sin cotización con precio de referencia y rendimiento vacíos y el motivo, y el resto con normalidad. `GET /estrategias` no usa el proveedor.
+- **`404 Not Found`** si la estrategia no existe, en señales, backtest y recomendaciones.
+- **`400 Bad Request`** si los parámetros de la estrategia están fuera de rango o son incoherentes.
+
+Códigos específicos de un endpoint:
+- `POST /cartera/importacion`: `413` si el fichero supera 5 MB, `415` si no es un XLSX y `422` si falta una columna obligatoria o hay filas no válidas.
+- `GET /cartera/rentabilidad/twr`: `422` si el proveedor no tiene ningún precio histórico para algún ticker de la cartera, indicando los tickers sin histórico.
+- `GET /estrategias/{id}/senales/{ticker}/historico`: `404` si el ticker no tiene posición abierta en la cartera.
+- `GET /recomendaciones`: `400` si no se indica la estrategia.
 
 Detalle OpenAPI de los 3 principales:
 
@@ -495,7 +507,11 @@ paths:
       summary: Compara la cartera real con todas las estrategias del catálogo
       requestBody:
         required: false
-        description: Sin cuerpo se simulan todas las estrategias con sus parámetros por defecto
+        description: >-
+          Estrategia seleccionada y sus parámetros opcionales; el resto del catálogo
+          se simula con sus parámetros por defecto. Sin cuerpo se simulan todas las
+          estrategias con sus parámetros por defecto y no se genera la propuesta de
+          compras contra la señal, porque no hay estrategia seleccionada.
         content:
           application/json:
             schema:
@@ -557,7 +573,7 @@ components:
       description: Las métricas de posiciones cerradas son null si no hay ninguna
       properties:
         twr_acumulada: { type: number }
-        twr_anualizada: { type: number, nullable: true }
+        twr_anualizada: { type: number, nullable: true, description: "null (no aplicable) si el periodo es inferior a 365 días" }
         max_drawdown: { type: number, example: -0.25 }
         posiciones_cerradas: { type: integer }
         pct_ganadoras: { type: number, nullable: true }
@@ -653,7 +669,7 @@ Entonces veo las 10 de mayor intensidad, y a igual intensidad AAPL antes que MSF
 Y una compra con precio 100 USD y ATR(14) de 2 USD tiene stop-loss 96 USD y objetivo 106 USD
 Y una venta de MSFT con dos posiciones de 10 y 5 acciones indica 15 acciones
 Y una venta con una posición con ganancia a ≤ 30 días de Long-Term muestra un aviso con la fecha en que pasaría a Long-Term
-Y se muestra el aviso "No constituye asesoramiento financiero"
+Y se muestra el aviso "Las señales son orientativas y no constituyen asesoramiento financiero"
 ```
 Prioridad: Must · Estimación: 5 SP
 
