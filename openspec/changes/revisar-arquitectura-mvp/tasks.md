@@ -10,7 +10,7 @@ Entrega 1: todas las tareas editan solo `readme.md`; no se escribe código. Apli
 
 ## 2. Backend (HU-1 a HU-5)
 
-- [ ] 2.1 Sustituir el diagrama y el texto del patrón de la sección 2.1 por el diagrama, la comparativa con microservicios, los beneficios y los sacrificios de A1-A2. Verificar que el Mermaid se renderiza y que aparecen los seis puertos.
+- [ ] 2.1 Sustituir el diagrama y el texto del patrón de la sección 2.1 por el diagrama, la comparativa con microservicios, los beneficios y los sacrificios de A1-A2. Verificar que el Mermaid se renderiza y que aparecen los siete puertos.
 - [ ] 2.2 Actualizar la tabla de la sección 2.2 con el servicio de datos de mercado (A5), el puerto `Reloj` (A6), el mapeo de errores (A7) y el contrato de import-linter. Verificar que cada componente nuevo aparece también en el diagrama.
 - [ ] 2.3 Cambiar en la fila F1 de la sección 1.2 y en los "Datos derivados" de la sección 3.2 "última cotización" por "último cierre diario sin ajustar, con su fecha" (A3), y añadir la limitación de splits durante la tenencia a las "Decisiones de alcance" (A4). Verificar contra el delta de `importacion-cartera`.
 - [ ] 2.4 Añadir a "Fórmulas clave" de la sección 3.2 la reconstrucción `cierre_sin_ajustar = cierre × F(fecha)` con el ejemplo del split 10:1 (120,00 → 1.200,00) y qué serie usa cada feature. Verificar que coincide con A4.
@@ -20,6 +20,8 @@ Entrega 1: todas las tareas editan solo `readme.md`; no se escribe código. Apli
 
 - [ ] 2.8 Sustituir la tabla de componentes de la sección 2.2 por la de design.md ("Componentes principales") y añadir TA-Lib ≥ 0.6.5 a la sección 2.7 con la justificación de A12. Verificar que cada componente aparece en el diagrama de la sección 2.1 y viceversa.
 - [ ] 2.9 Añadir a la fila F3 de la sección 1.2 el histórico mínimo (periodo + 100 en el RSI y el ATR) y a la fila F5 la exclusión de las compras sin ATR suficiente. Verificar contra los deltas de `estrategias-indicador` y `operaciones-recomendadas`.
+- [ ] 2.10 Sustituir el árbol de la sección 2.3 por el de A13, con el propósito de cada directorio y las reglas de dependencias del backend y del frontend, y reemplazar su tabla de trazabilidad por la de una fila por sección del readme. Verificar que la guía de apply de `config.yaml` ("tabla de trazabilidad de su sección 2.3") sigue apuntando a una tabla existente.
+- [ ] 2.11 Ajustar las rutas y nombres citados en la sección 6: BE-01 (`adapters/xlsx_parser.py` → `adapters/xlsx/lector_xlsx.py`), FE-01 (componentes dentro de `features/cartera/`) y DB-01 (seed desde `app/recursos/cartera-ejemplo.xlsx`). Verificar con `grep -n "xlsx_parser\|price_provider\|llm_client" readme.md` que no quedan nombres antiguos.
 
 ## 3. Tests (HU-1 a HU-5)
 
@@ -28,6 +30,7 @@ Entrega 1: todas las tareas editan solo `readme.md`; no se escribe código. Apli
 ## 4. DevOps (HU-1 a HU-5)
 
 - [ ] 4.1 Eliminar de las secciones 0.4 y 2.4 el despliegue opcional en PaaS, dejar solo `docker compose` local y CI sin despliegue (A9), y añadir import-linter al stack de la sección 2.7. Verificar con `grep -n -i "render\|railway\|fly.io\|paas" readme.md` que no quedan referencias.
+- [ ] 4.2 Añadir a la sección 2.7 uv (`uv sync --frozen` en Docker y CI), ESLint con `import/no-restricted-paths` y openapi-typescript, y a la sección 2.4 los comandos de CI con uv. Verificar que coinciden con A13.
 
 ## 5. Comprobación final
 

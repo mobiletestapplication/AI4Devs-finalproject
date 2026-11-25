@@ -13,6 +13,7 @@ Entrega 1: todas las tareas son de documentación en `readme.md`; no se escribe 
 - [ ] 2.3 Documentar en la sección 4 `GET /api/cartera/resumen` y `GET /api/cartera/ejemplo` en la tabla de endpoints, con un ejemplo de respuesta del resumen. Verificar que se recogen los casos sin cartera y sin proveedor, ambos con `200 OK`.
 - [ ] 2.4 Añadir a la sección 2.2 el resumen de cartera en la fila "Motor de posiciones". Verificar que menciona que reutiliza el cálculo de posiciones (D1 de design.md).
 - [ ] 2.5 Añadir a la sección 2.5 los controles del endpoint de ejemplo: sin entrada de la persona, adjunto con `nosniff` y fichero validado en CI. Verificar que coinciden con la sección de seguridad de design.md.
+- [ ] 2.6 Usar como ruta del XLSX de ejemplo `backend/app/recursos/cartera-ejemplo.xlsx` (decisión A13 de `revisar-arquitectura-mvp`) en lugar de "los fixtures del backend", también en D4 y en el diagrama de design.md de este change. Verificar que ni el readme ni este change sitúan el fichero bajo `tests/`.
 
 ## 3. Frontend (HU-1)
 

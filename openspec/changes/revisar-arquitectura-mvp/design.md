@@ -156,7 +156,7 @@ Las consultas de posiciones no lanzan `ProveedorNoDisponible`: devuelven cada po
 | Eventos de split | Sí | No | No |
 | Ajuste | Configurable; OHLC ajustado por splits | No está claro | Precio real sin ajustar; el ajustado es de pago |
 
-- **Elegido:** yfinance como único proveedor real, con `auto_adjust=False` explícito y todos los tickers en una sola llamada. Además, un **proveedor de ficheros** (CSV de fixtures) para los tests y para grabar la demo sin conexión.
+- **Elegido:** yfinance como único proveedor real, con `auto_adjust=False` explícito y todos los tickers en una sola llamada. Además, un **proveedor de ficheros** (CSV en `app/recursos/precios-demo/`, A13) para los tests y para grabar la demo sin conexión.
 - **Alternativa descartada:** Alpha Vantage gratuito. Con 100 días no cubre el calentamiento de 200 sesiones ni el backtest.
 - **Alternativa descartada:** Stooq como respaldo automático. Sin eventos de split y con un ajuste incierto, mezclar proveedores daría series inconsistentes de un mismo ticker según de dónde hubiera llegado cada tramo.
 - **Contrato del puerto `ProveedorPrecios`:**
@@ -204,6 +204,112 @@ El catálogo de estrategias crecerá (MACD, Bollinger…), así que el cálculo 
 - **Alternativa descartada:** implementación propia en producción. Es razonable con 3 indicadores, pero no escala a un catálogo que crece.
 - **Alternativa descartada:** pandas-ta, por el riesgo de mantenimiento.
 - **Sacrificio:** la imagen de la API gana una dependencia nativa. Si los wheels no cubren la plataforma de un desarrollador, habrá que compilar la librería C.
+
+### A13. Estructura del repositorio
+```
+.
++-- .claude/                    # comandos y skills de OpenSpec para el agente
++-- .github/workflows/ci.yml    # lint, tipos, import-linter, tests, auditorías y secretos
++-- backend/
+|   +-- pyproject.toml  uv.lock # dependencias (uv), ruff, mypy y contratos de import-linter
+|   +-- alembic/                # migraciones versionadas
+|   +-- app/
+|   |   +-- main.py             # punto de arranque: crea FastAPI y conecta puertos y adaptadores
+|   |   +-- api/                # capa HTTP
+|   |   |   +-- routers/        #   cartera.py, rentabilidad.py, estrategias.py, backtests.py, recomendaciones.py
+|   |   |   +-- errores.py      #   excepciones de dominio -> HTTP y problem+json (A7, A11)
+|   |   |   +-- dependencias.py #   inyección de casos de uso y adaptadores
+|   |   +-- application/        # casos de uso: orquestan dominio y puertos, sin lógica financiera
+|   |   |   +-- puertos.py      #   LectorCartera, ProveedorPrecios, RepositorioCartera, CachePrecios, Reloj, ClienteLLM
+|   |   |   +-- mercado.py      #   servicio de datos de mercado: rango, cobertura, refresco, caché desactualizada
+|   |   |   +-- importar_cartera.py, consultar_posiciones.py, calcular_twr.py,
+|   |   |       calcular_senales.py, ejecutar_backtest.py, recomendar_operaciones.py
+|   |   +-- domain/             # lógica financiera pura: solo stdlib, pandas y numpy
+|   |   |   +-- modelos.py      #   Posicion, SerieDiaria, Senal... (dataclasses)
+|   |   |   +-- errores.py      #   CarteraNoImportada, TickersSinHistorico, ParametrosNoValidos...
+|   |   |   +-- posiciones.py   #   rendimiento, días de tenencia, ST/LT
+|   |   |   +-- mercado.py      #   normalización a dos series, calendario de sesiones (A4, A5)
+|   |   |   +-- twr.py
+|   |   |   +-- indicadores/    #   puerto.py (IndicadoresTecnicos) + histórico mínimo (A12)
+|   |   |   +-- estrategias/    #   catalogo.py, rsi.py, cruce_medias.py (un fichero por estrategia)
+|   |   |   +-- backtest.py
+|   |   |   +-- recomendaciones.py
+|   |   +-- adapters/           # implementaciones de puertos contra sistemas externos y librerías
+|   |   |   +-- xlsx/lector_xlsx.py        # openpyxl + defusedxml
+|   |   |   +-- precios/yfinance.py, ficheros.py
+|   |   |   +-- indicadores/talib.py
+|   |   |   +-- llm/cliente_llm.py         # S1 (opcional)
+|   |   |   +-- reloj.py
+|   |   +-- infrastructure/     # persistencia y configuración
+|   |   |   +-- config.py       #   ajustes por entorno (BENCHMARK_TICKER, proveedor, BD)
+|   |   |   +-- db/             #   session.py, modelos ORM, repositorios (RepositorioCartera, CachePrecios)
+|   |   +-- recursos/           # ficheros incluidos en la imagen
+|   |   |   +-- cartera-ejemplo.xlsx   # GET /api/cartera/ejemplo, seed y tests
+|   |   |   +-- precios-demo/          # CSV del proveedor de ficheros (demo sin conexión, A10)
+|   |   +-- scripts/seed.py
+|   +-- tests/
+|       +-- unit/               # dominio con los ejemplos numéricos de las specs; reloj fijo
+|       +-- contract/           # adaptadores de precios e indicadores (TA-Lib frente a StockCharts)
+|       +-- integration/        # API + PostgreSQL (Testcontainers) con el proveedor de ficheros
+|       +-- fixtures/           # XLSX maliciosos y no válidos (solo tests)
++-- frontend/
+|   +-- src/
+|   |   +-- app/                # router, proveedores (TanStack Query), estrategia seleccionada
+|   |   +-- features/           # cartera/, rentabilidad/, estrategias/, backtesting/, recomendaciones/
+|   |   |                       #   cada una con api.ts, componentes y hooks propios
+|   |   +-- shared/
+|   |       +-- api/            # cliente HTTP y tipos generados desde el OpenAPI (openapi-typescript)
+|   |       +-- ui/             # avisos legales, etiquetas de color, formato de USD y %
+|   +-- e2e/                    # Playwright
++-- docs/                       # wireframes y capturas
++-- openspec/
+|   +-- config.yaml             # contexto y reglas del proyecto para el agente
+|   +-- specs/<capability>/spec.md   # verdad vigente
+|   +-- changes/<change>/       # proposal, specs (deltas), design, tasks
+|       +-- archive/            # changes aplicados; su design.md hace de ADR
++-- docker-compose.yml  .env.example  CLAUDE.md  readme.md  prompts.md
+```
+
+**Reglas de dependencias:**
+- **Backend** (contratos de import-linter en `pyproject.toml`): `api → application → domain`; `adapters` e `infrastructure` solo dependen de `application.puertos` y de `domain.indicadores.puerto`; `domain` no importa nada de `api`, `application`, `adapters` ni `infrastructure`, ni FastAPI, SQLAlchemy, yfinance, openpyxl o TA-Lib.
+- **Frontend** (ESLint `import/no-restricted-paths`): una feature no importa otra; lo común pasa por `shared/`.
+- `IndicadoresTecnicos` vive en `domain/` y no en `application/` porque es un puerto de cálculo puro que usa el propio dominio, no un puerto de I/O.
+
+**Decisiones:**
+- **Idioma de los identificadores:** dominio, puertos, casos de uso y adaptadores en castellano, con el vocabulario de las specs. En inglés solo lo que impone el framework o la convención (`main.py`, `config.py`, `session.py`, `routers/`, `conftest.py`) y los nombres de producto (`yfinance.py`, `talib.py`).
+  - **Alternativa descartada:** todo en inglés. Obliga a traducir entre specs y código (posición → position, plusvalía → capital gain).
+  - **Alternativa descartada:** todo en castellano. Choca con los nombres que esperan las herramientas.
+- **Frontend por feature:** cada change de una feature toca una sola carpeta.
+  - **Alternativa descartada:** por tipo (`pages/`, `components/`, `hooks/`, `api/`). Reparte cada feature en cuatro carpetas.
+  - **Sacrificio:** hay que decidir qué es compartido y qué es de una feature.
+- **Gestor de dependencias del backend: uv.** `uv sync --frozen` en Docker y CI fija exactamente pandas, numpy y TA-Lib, de modo que los resultados numéricos no cambian entre entornos.
+  - **Alternativa descartada:** pip con requirements (bloqueo manual).
+  - **Alternativa descartada:** Poetry (más lento, sin ventaja para este proyecto).
+- **Recursos incluidos en la imagen** (`app/recursos/`): el XLSX de ejemplo y los precios de demo se sirven o se usan en ejecución, así que no pueden estar en `tests/`, que no se copia a la imagen. Los tests los leen desde `app/recursos/`. `tests/fixtures/` queda solo para ficheros no válidos o maliciosos.
+- **Sin ADR en `docs/`:** el `design.md` de cada change archivado hace de registro de decisiones. `docs/` queda para wireframes y capturas.
+
+### Trazabilidad OpenSpec → readme
+Precedencia: las specs prevalecen sobre `design.md` y este sobre el readme. El apply actualiza las secciones de esta tabla y el archive comprueba que el readme no contradice las specs.
+
+| Sección del readme | Artefacto de origen | Qué se toma | Se actualiza al |
+|---|---|---|---|
+| 0. Ficha | — (manual) | Datos de la entrega | — |
+| 1.1 Objetivo | `proposal.md` (Why) · `config.yaml` (contexto) | Problema, valor y destinatarios | apply |
+| 1.2 Funcionalidades | `specs/*/spec.md` (Purpose y requisitos) · `proposal.md` (What Changes, Fuera de alcance) | Tabla F1-F5, S1-S3, alcance | apply y archive |
+| 1.3 Diseño y UX | `specs/*/spec.md` (requisitos "en pantalla") | Elementos visibles y avisos | apply |
+| 1.4 Instalación | `tasks.md` (DevOps) · `design.md` (Migration Plan) | Pasos y variables de entorno | apply |
+| 2.1 Diagrama | `design.md` (Decisions, Mermaid) | Patrón, componentes, beneficios y sacrificios | apply |
+| 2.2 Componentes | `design.md` (tabla de componentes) | Componente, tecnología y responsabilidad | apply |
+| 2.3 Estructura | `design.md` (estructura y reglas de dependencias) | Árbol, propósito de cada directorio y esta tabla | apply |
+| 2.4 Infraestructura | `design.md` (despliegue) · `tasks.md` (DevOps) | Compose y CI | apply |
+| 2.5 Seguridad | `design.md` (seguridad) · `specs` (rechazos con código HTTP) | Riesgo y control; controles pendientes de spec marcados | apply |
+| 2.6 Tests | `specs` (escenarios WHEN/THEN) · `tasks.md` (Tests) | Casos con sus valores numéricos | apply |
+| 2.7 Stack | `design.md` · `config.yaml` (stack previsto) | Tecnología y motivo | apply |
+| 3. Modelo de datos | `design.md` (erDiagram) | Entidades, claves, restricciones y fórmulas | apply |
+| 4. API | `specs` (requisitos "por HTTP") | Endpoints, códigos y OpenAPI | apply y archive |
+| 5. Historias de usuario | `specs` (escenarios) · `proposal.md` (F/HU) | Gherkin con ejemplos | apply |
+| 6. Tickets | `tasks.md` | Tareas, criterios de aceptación y backlog | apply |
+| 7. Pull requests | — (un PR por change, si se usan) | Enlace y resumen | merge |
 
 ### Componentes principales
 | Componente | Tecnología | Responsabilidad |
