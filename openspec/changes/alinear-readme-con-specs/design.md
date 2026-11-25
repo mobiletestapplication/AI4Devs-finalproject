@@ -46,6 +46,7 @@ Las reglas de D15-D17 se mantienen en la sección 2.5 con la marca *"(control de
 - **Alternativa descartada:** formalizarlas ya en `importacion-cartera`. Lo descartó la persona: se mantienen como controles de diseño.
 - **Alternativa descartada:** eliminarlas. Se perderían controles de seguridad documentados.
 - **Sacrificio:** hasta que exista ese change, los tests de esas reglas no se pueden derivar de un escenario de spec.
+- **Actualización:** el change `endurecer-seguridad` formaliza estas reglas en `importacion-cartera` y en la nueva spec `seguridad-api`. Si `endurecer-seguridad` ya está aplicado cuando se aplique este change, se omiten las marcas de D15-D17; si se aplica después, sus tareas las quitan.
 
 ### D-b. El readme resume; no duplica escenarios
 Las omisiones (D3-D14) se resuelven con frases cortas que citan la spec, no copiando escenarios. Así se reduce la superficie de divergencia futura.

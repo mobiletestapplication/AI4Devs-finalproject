@@ -11,7 +11,7 @@ Entrega 1: todas las tareas editan solo `readme.md`; no se escribe código ni se
 ## 2. Backend: funcionalidades y componentes (HU-2 a HU-5)
 
 - [ ] 2.1 Actualizar las filas F2, F3, F4 y F5 de la tabla de la sección 1.2 (D6-D9). Verificar que cada frase añadida corresponde a un requisito de la spec indicada en la columna "Spec".
-- [ ] 2.2 Marcar "precios > 0" como control de diseño en la fila "Ingesta XLSX" de la sección 2.2 y en la tarea 4 de BE-01 de la sección 6 (D17). Verificar que ninguna de las dos lo presenta como requisito de spec.
+- [ ] 2.2 Marcar "precios > 0" como control de diseño en la fila "Ingesta XLSX" de la sección 2.2 y en la tarea 4 de BE-01 de la sección 6 (D17). Verificar que ninguna de las dos lo presenta como requisito de spec. Omitir si `endurecer-seguridad` ya está aplicado (ver D-a).
 
 ## 3. Frontend (HU-1 a HU-5)
 
@@ -20,7 +20,7 @@ Entrega 1: todas las tareas editan solo `readme.md`; no se escribe código ni se
 
 ## 4. Seguridad (HU-1)
 
-- [ ] 4.1 Marcar en la tabla de la sección 2.5 las reglas de D15 y D16 con "(control de diseño, pendiente de spec)", quitar el `→ 415` de `.xlsm`/`vbaProject.bin` y añadir la nota al pie de la decisión D-a. Verificar que los únicos códigos HTTP que quedan en la tabla son los que define `importacion-cartera` (`413`, `415` por no ser XLSX y `422`).
+- [ ] 4.1 Marcar en la tabla de la sección 2.5 las reglas de D15 y D16 con "(control de diseño, pendiente de spec)", quitar el `→ 415` de `.xlsm`/`vbaProject.bin` y añadir la nota al pie de la decisión D-a. Verificar que los únicos códigos HTTP que quedan en la tabla son los que define `importacion-cartera` (`413`, `415` por no ser XLSX y `422`). Omitir las marcas si `endurecer-seguridad` ya está aplicado (ver D-a).
 
 ## 5. Comprobación final
 
