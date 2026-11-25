@@ -83,6 +83,22 @@ Ninguno cita escenarios de las specs, porque el ticket no implementa ninguno; el
 - [Las acciones fijadas por SHA quedan desactualizadas] → Dependabot para `github-actions`, `pip` (uv) y `npm`.
 - [El primer `docker compose up` es lento] → caché de capas por etapa y `uv sync` antes de copiar el código.
 
+## Ajustes durante la implementación
+
+Diferencias con las decisiones anteriores, todas por motivos técnicos y reflejadas en las secciones 1.4, 2.3 y 2.4 del readme:
+- **ESLint 10 con `eslint-plugin-import-x`** (O4). `eslint-plugin-import` solo admite hasta ESLint 9, y su fork mantenido ofrece la misma regla. Se registra con el prefijo `import`, de modo que la regla sigue llamándose `import/no-restricted-paths`.
+  - **Descartado:** bajar a ESLint 9, que ya no recibirá nuevas versiones.
+- **`DATABASE_URL` como `SecretStr`** (O3), igual que `LLM_API_KEY`, porque contiene la contraseña. Es obligatoria: sin ella, la API y Alembic no arrancan.
+- **`httpx2` en lugar de `httpx`** para el `TestClient`. Starlette marca `httpx` como obsoleto y lo importa directamente.
+- **CSP solo en la SPA** (O5). `/api` recibe `nosniff` y `Referrer-Policy`, pero no la CSP. Swagger UI (`/api/docs`) carga recursos de un CDN y lleva un script en línea, y una CSP estricta lo rompería; la SPA sí tiene `default-src 'self'` sin `unsafe-inline`.
+- **`POSTGRES_PASSWORD` obligatoria en compose** (O5). Va vacía en `.env.example` y compose se detiene con un mensaje claro si falta. En compose, `DATABASE_URL` se construye a partir de las variables `POSTGRES_*`, y la de `.env.example` solo sirve para ejecutar fuera de Docker.
+- **Endurecimiento de los contenedores** (O5): `cap_drop: [ALL]` y `no-new-privileges` en `api`, `migrate` y `web`. En el modo desarrollo, `web` (Vite) recupera las capacidades porque `npm ci` escribe en el volumen de `node_modules`.
+- **Disparadores del CI** (O6): push a `main` y a `feature/**`, además de los pull requests a `main`. Sin ellos, la tarea 5.3 no podría verificarse en la rama `feature/entrega-2-sg`.
+  - El job `seguridad` añade `pull-requests: read`, que gitleaks necesita para listar los commits de un pull request.
+- **Excepciones de gitleaks** en `.gitleaksignore`. Son 5 tokens JWT de ejemplo de la plantilla del curso, que no son credenciales reales, en el commit `64a9d6a`. Ese commit ya está en `main` y ya no aparece en el readme actual. Las excepciones se registran por huella, con el motivo y la fecha de revisión.
+- **Dependabot con el ecosistema `uv`** en lugar de `pip` (más imágenes base `docker`). Actualiza `uv.lock` directamente.
+- **Dos `tsconfig`**: uno para `src`, con los tipos del navegador, y otro para `vite.config.ts` y `eslint.config.js`, con los tipos de Node, para que el código de la aplicación no vea las API de Node.
+
 ## Migration Plan
 
 No hay nada desplegado. El rollback es revertir el commit; no hay datos que migrar.

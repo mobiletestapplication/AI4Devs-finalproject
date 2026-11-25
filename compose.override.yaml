@@ -1,0 +1,32 @@
+# Modo desarrollo: Docker Compose carga este fichero automáticamente con "docker compose up".
+# Vite con recarga en caliente, uvicorn --reload con el código montado y la BD accesible desde el host.
+# Todos los puertos solo en 127.0.0.1.
+
+services:
+  db:
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  api:
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app"]
+    environment:
+      ORIGENES_ADMITIDOS: http://localhost:5173,http://127.0.0.1:5173,http://localhost:8080,http://127.0.0.1:8080
+    volumes:
+      - ./backend/app:/app/app:ro
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  web:
+    image: node:24.21.0-alpine
+    build: !reset null
+    working_dir: /app
+    command: ["sh", "-c", "npm ci && npm run dev -- --host 0.0.0.0"]
+    environment:
+      VITE_API_PROXY: http://api:8000
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports: !override
+      - "127.0.0.1:5173:5173"
+    # npm ci necesita escribir en el volumen de node_modules; solo en desarrollo.
+    cap_drop: !reset []

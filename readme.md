@@ -113,25 +113,38 @@ Avisos permanentes: "Las señales son orientativas y no constituyen asesoramient
 
 ### **1.4. Instrucciones de instalación:**
 > Documenta de manera precisa las instrucciones para instalar y poner en marcha el proyecto en local (librerías, backend, frontend, servidor, base de datos, migraciones y semillas de datos, etc.)
-> No requerido en la Entrega 1. Se completará en la Entrega 2 (incluirá `.env.example` sin secretos, seed con la cartera de ejemplo y `compose.yaml`). Previsto (detalle en la sección 2.4):
+**Requisitos:** Docker con Compose v2. Para trabajar fuera de los contenedores: uv 0.12, Python 3.12 y Node 24.
+
+**Modo demo** (build de producción, solo el puerto `127.0.0.1:8080`):
 ```bash
 git clone https://github.com/mobiletestapplication/AI4Devs-finalproject.git
 cd AI4Devs-finalproject
-cp .env.example .env          # sin secretos; PROVEEDOR_PRECIOS=ficheros para la demo sin conexión; BENCHMARK_TICKER=SPY (índice de referencia)
+cp .env.example .env          # rellena POSTGRES_PASSWORD (obligatoria); PROVEEDOR_PRECIOS=ficheros para la demo sin conexión
 
-# Vía 1: imágenes publicadas en GHCR
-docker compose pull
-docker compose -f compose.yaml up -d
-# Vía 2: compilar en local
 docker compose -f compose.yaml up -d --build
-# db arranca y espera a responder, migrate aplica las migraciones y termina, después arrancan api y web
+# db arranca y espera a responder, migrate aplica las migraciones y termina (código 0), api queda "healthy" y arranca web
+docker compose -f compose.yaml ps -a
 
-docker compose exec api python -m app.scripts.seed   # opcional: carga cartera-ejemplo.xlsx
 # Aplicación: http://localhost:8080  ·  API docs: http://localhost:8080/api/docs
 
-docker compose down           # conserva el volumen pgdata; down -v borra cartera y caché de precios
+docker compose -f compose.yaml down      # conserva el volumen pgdata
+docker compose -f compose.yaml down -v   # borra también pgdata (cartera y caché de precios)
 ```
-Modo desarrollo: `docker compose up` carga también `compose.override.yaml` (Vite en `http://localhost:5173`, `uvicorn --reload` y el código montado desde el disco).
+Sin `POSTGRES_PASSWORD`, compose se detiene con el mensaje "Define POSTGRES_PASSWORD en .env".
+
+**Modo desarrollo:** `docker compose up -d` carga también `compose.override.yaml`: Vite con recarga en caliente en `http://localhost:5173` (redirige `/api` a la API), `uvicorn --reload` con `backend/app` montado en `http://localhost:8000` y PostgreSQL en `127.0.0.1:5432`. Todos los puertos se publican solo en `127.0.0.1`.
+
+**Sin contenedores** (tests y herramientas de calidad, los mismos comandos que el CI):
+```bash
+cd backend && uv sync --frozen
+uv run ruff check . && uv run mypy && uv run lint-imports && uv run pytest --cov=app
+cd ../frontend && npm ci
+npm run lint && npm run typecheck && npx vitest run && npm run build
+```
+
+**Pendiente en tickets posteriores:**
+- **Seed** (`docker compose exec api python -m app.scripts.seed`): llega con DB-01, con un fixture mínimo, y desde BE-08 carga `cartera-ejemplo.xlsx`.
+- **Imágenes publicadas:** `docker compose -f compose.yaml pull` con las imágenes de GHCR llega con REL-01.
 
 ---
 
@@ -285,8 +298,10 @@ Contrato del puerto `ProveedorPrecios`:
 .
 +-- .claude/                    # comandos y skills de OpenSpec para el agente
 +-- .github/workflows/ci.yml    # lint, tipos, import-linter, tests, auditorías y secretos
++-- .github/dependabot.yml     # actualizaciones semanales de acciones, uv, npm e imágenes base
 +-- backend/
 |   +-- pyproject.toml  uv.lock # dependencias (uv), ruff, mypy y contratos de import-linter
+|   +-- Dockerfile              # imagen de api y migrate: multi-etapa, uv, usuario sin privilegios
 |   +-- alembic/                # migraciones versionadas
 |   +-- app/
 |   |   +-- main.py             # punto de arranque: crea FastAPI y conecta puertos y adaptadores
@@ -336,18 +351,21 @@ Contrato del puerto `ProveedorPrecios`:
 |   |       +-- api/            # cliente HTTP y tipos generados desde el OpenAPI (openapi-typescript)
 |   |       +-- ui/             # avisos legales, etiquetas de color, formato de USD y %
 |   +-- e2e/                    # Playwright
+|   +-- Dockerfile  nginx.conf  # imagen web: build de Vite + nginx sin privilegios (proxy /api, CSP)
+|   +-- eslint.config.js        # fronteras entre features (import/no-restricted-paths)
 +-- docs/                       # wireframes y capturas
 +-- openspec/
 |   +-- config.yaml             # contexto y reglas del proyecto para el agente
 |   +-- specs/<capability>/spec.md   # verdad vigente
 |   +-- changes/<change>/       # proposal, specs (deltas), design, tasks
 |       +-- archive/            # changes aplicados; su design.md hace de ADR
-+-- compose.yaml  compose.override.yaml  .env.example  CLAUDE.md  readme.md  prompts.md
++-- compose.yaml  compose.override.yaml  .env.example  .gitignore  .gitleaksignore
++-- CLAUDE.md  readme.md  prompts.md
 ```
 
 **Reglas de dependencias:**
 - **Backend** (contratos de import-linter en `pyproject.toml`): `api → application → domain`; `adapters` e `infrastructure` solo dependen de `application.puertos` y de `domain.indicadores.puerto`; `domain` no importa nada de `api`, `application`, `adapters` ni `infrastructure`, ni FastAPI, SQLAlchemy, yfinance, openpyxl o TA-Lib.
-- **Frontend** (ESLint `import/no-restricted-paths`): una feature no importa otra; lo común pasa por `shared/`.
+- **Frontend** (ESLint `import/no-restricted-paths`, de `eslint-plugin-import-x` registrado con el prefijo `import` porque `eslint-plugin-import` no admite ESLint 10): una feature no importa otra; lo común pasa por `shared/`.
 - `IndicadoresTecnicos` vive en `domain/` y no en `application/` porque es un puerto de cálculo puro que usa el propio dominio, no un puerto de I/O.
 
 **Convenciones:**
@@ -419,9 +437,10 @@ flowchart LR
 - **Mismo origen:** nginx sirve la SPA y redirige `/api`, así que no hace falta CORS; en desarrollo, el proxy de Vite hace lo mismo.
 - **Puertos publicados solo en `127.0.0.1`** (`127.0.0.1:8080:8080`): nadie de la misma red puede sustituir la cartera.
 - **Modos de ejecución:** `compose.yaml` es el modo demo (build de producción); `compose.override.yaml`, que Docker Compose carga automáticamente, es el modo desarrollo (Vite en el 5173, `uvicorn --reload` y el código montado desde el disco). La demo se arranca con `docker compose -f compose.yaml up`.
-- **`.env.example`**, sin secretos: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DATABASE_URL`, `BENCHMARK_TICKER=SPY`, `PROVEEDOR_PRECIOS=yfinance|ficheros` y `LLM_API_KEY=` (vacía, solo para S1).
+- **`.env.example`**, sin secretos: `POSTGRES_USER`, `POSTGRES_PASSWORD` (vacía; compose no arranca hasta que se rellena), `POSTGRES_DB`, `DATABASE_URL` (solo para ejecutar fuera de Docker; compose la construye con las anteriores), `HOSTS_ADMITIDOS=localhost,127.0.0.1`, `ORIGENES_ADMITIDOS=http://localhost:8080,http://127.0.0.1:8080` (el modo desarrollo añade el 5173), `BENCHMARK_TICKER=SPY`, `PROVEEDOR_PRECIOS=yfinance|ficheros` y `LLM_API_KEY=` (vacía, solo para S1). La API no arranca si `HOSTS_ADMITIDOS` queda vacía o `PROVEEDOR_PRECIOS` tiene otro valor.
+- **Endurecimiento de los contenedores:** `api`, `migrate` y `web` se ejecutan con `cap_drop: [ALL]` y `no-new-privileges`; las imágenes base están fijadas por versión (`python:3.12.16-slim`, `ghcr.io/astral-sh/uv:0.12.23`, `postgres:16.16`, `node:24.21.0-alpine`, `nginxinc/nginx-unprivileged:1.30-alpine`).
 
-**CI (GitHub Actions)**, en cada push y pull request a `main`, cancelando las ejecuciones anteriores de la misma rama y con caché de uv y npm:
+**CI (GitHub Actions)**, en cada push a `main` y a las ramas `feature/**` y en cada pull request a `main`, cancelando las ejecuciones anteriores de la misma rama, con caché de uv y npm, permisos `contents: read` y acciones fijadas por SHA:
 | Job | Qué ejecuta |
 |---|---|
 | `openspec` | `openspec validate --changes --strict` y validación de las specs vivas |
@@ -432,7 +451,7 @@ flowchart LR
 | `e2e` | compose de tests con `PROVEEDOR_PRECIOS=ficheros` y `FECHA_ACTUAL_FIJA` (variable que solo existe en ese compose), y Playwright; depende de los tres jobs de código |
 | `release` | solo con etiquetas `v*` y todo lo anterior en verde |
 
-Un fallo de cualquier job bloquea el merge. **Testcontainers**, en lugar de un servicio de Actions, para que los tests de integración se ejecuten igual en local y en CI; **E2E con el proveedor de ficheros** para que no dependa de Yahoo ni falle de forma intermitente.
+Desde OPS-01 se ejecutan `openspec`, `backend-calidad`, `backend-tests`, `frontend` y `seguridad`; el script de trazabilidad y `e2e` se añaden con QA-01, la comprobación de los tipos generados desde el OpenAPI con FE-01 y `release` con REL-01. gitleaks usa `.gitleaksignore` para las excepciones revisadas a mano. Un fallo de cualquier job bloquea el merge. **Testcontainers**, en lugar de un servicio de Actions, para que los tests de integración se ejecuten igual en local y en CI; **E2E con el proveedor de ficheros** para que no dependa de Yahoo ni falle de forma intermitente.
 
 **Publicación de imágenes:** el job `release` construye `api` y `web` con buildx para `linux/amd64` y `linux/arm64` y las publica en `ghcr.io/<owner>/traide-api` y `ghcr.io/<owner>/traide-web` con la versión y el SHA del commit, usando el `GITHUB_TOKEN` con `packages: write`. Los paquetes son públicos para que quien evalúe los descargue sin iniciar sesión. Cada servicio de `compose.yaml` declara `image:` y `build:`: `pull` usa lo publicado y `up --build` compila en local.
 

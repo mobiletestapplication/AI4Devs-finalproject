@@ -1,0 +1,73 @@
+# Modo demo: build de producción. Arranque: docker compose -f compose.yaml up -d --build
+# Modo desarrollo: docker compose up (carga también compose.override.yaml).
+name: traide
+
+x-entorno-api: &entorno-api
+  DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-traide}:${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}@db:5432/${POSTGRES_DB:-traide}
+  HOSTS_ADMITIDOS: ${HOSTS_ADMITIDOS:-localhost,127.0.0.1}
+  ORIGENES_ADMITIDOS: ${ORIGENES_ADMITIDOS:-http://localhost:8080,http://127.0.0.1:8080}
+  PROVEEDOR_PRECIOS: ${PROVEEDOR_PRECIOS:-yfinance}
+  BENCHMARK_TICKER: ${BENCHMARK_TICKER:-SPY}
+  LLM_API_KEY: ${LLM_API_KEY:-}
+
+x-endurecido: &endurecido
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+
+services:
+  db:
+    image: postgres:16.16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-traide}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:-traide}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  migrate:
+    image: ghcr.io/mobiletestapplication/traide-api
+    build: ./backend
+    command: ["alembic", "upgrade", "head"]
+    environment: *entorno-api
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+    <<: *endurecido
+
+  api:
+    image: ghcr.io/mobiletestapplication/traide-api
+    build: ./backend
+    environment: *entorno-api
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      # Sin endpoint propio de salud (design O2): basta con que la API sirva su OpenAPI.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/openapi.json', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+    <<: *endurecido
+
+  web:
+    image: ghcr.io/mobiletestapplication/traide-web
+    build: ./frontend
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    <<: *endurecido
+
+volumes:
+  pgdata:

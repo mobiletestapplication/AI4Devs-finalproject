@@ -1,0 +1,98 @@
+[project]
+name = "traide-backend"
+version = "0.1.0"
+description = "API de trAIde: cartera simulada, TWR, estrategias, backtesting y recomendaciones"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",
+    "pydantic-settings>=2.7",
+    "sqlalchemy>=2.0",
+    "alembic>=1.14",
+    "psycopg[binary]>=3.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-cov>=6.0",
+    "httpx2>=2.16",
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "import-linter>=2.1",
+    "pip-audit>=2.7",
+    "bandit>=1.8",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["app"]
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+
+[tool.coverage.run]
+source = ["app"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv"]
+
+# Fronteras de la arquitectura hexagonal (sección 2.3 del readme, design O4).
+[tool.importlinter]
+root_packages = ["app"]
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Capas: api -> application -> domain"
+type = "layers"
+layers = [
+    "app.api",
+    "app.application",
+    "app.domain",
+]
+
+[[tool.importlinter.contracts]]
+name = "El dominio es puro: sin capas externas, frameworks ni I/O"
+type = "forbidden"
+source_modules = ["app.domain"]
+forbidden_modules = [
+    "app.api",
+    "app.application",
+    "app.adapters",
+    "app.infrastructure",
+    "fastapi",
+    "sqlalchemy",
+]
+
+[[tool.importlinter.contracts]]
+name = "Adaptadores e infraestructura no dependen de la capa HTTP"
+type = "forbidden"
+source_modules = [
+    "app.adapters",
+    "app.infrastructure",
+]
+forbidden_modules = ["app.api"]

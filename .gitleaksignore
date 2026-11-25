@@ -1,0 +1,8 @@
+# Excepciones de gitleaks revisadas a mano (2026-11-25).
+# Tokens JWT de ejemplo de una API ficticia (vetconnect) en el commit 64a9d6a de la plantilla
+# del curso, anterior a trAIde; no son credenciales reales y ya no están en el readme actual.
+64a9d6a4d7ef460e0d2c34e64da7bf934d0b1199:prompts.md:curl-auth-header:1088
+64a9d6a4d7ef460e0d2c34e64da7bf934d0b1199:readme.md:curl-auth-header:4028
+64a9d6a4d7ef460e0d2c34e64da7bf934d0b1199:readme.md:curl-auth-header:4288
+64a9d6a4d7ef460e0d2c34e64da7bf934d0b1199:readme.md:curl-auth-header:4528
+64a9d6a4d7ef460e0d2c34e64da7bf934d0b1199:readme.md:generic-api-key:4592

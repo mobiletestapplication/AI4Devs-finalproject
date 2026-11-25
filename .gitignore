@@ -1,0 +1,38 @@
+# Entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Python / uv
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.import_linter_cache/
+*.egg-info/
+
+# Coberturas e informes
+.coverage
+.coverage.*
+coverage/
+coverage.xml
+htmlcov/
+junit*.xml
+
+# Node / Vite
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+
+# Editores y sistema
+.vscode/
+.idea/
+.DS_Store
