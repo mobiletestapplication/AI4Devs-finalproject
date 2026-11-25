@@ -150,6 +150,14 @@ Al terminar, dime que features necesitan mas informacion y entrevistame para cua
 Genera 3 tickets de trabajo detallados para desarrollar de inicio a fin: uno de base de datos (esquema y migraciones con Alembic), uno de backend (endpoint de importación del XLSX con validación segura) y uno de frontend (carga del fichero y Watchlist). Cada uno con tipo, historia de usuario, estimación, dependencias, tareas, criterios de aceptación y Definition of Done. Añade un backlog resumido con el resto de tickets.
 Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda de los tickets de trabajo si no puedes definir claramente el requisito.
 
+
+**Prompt 2:**
+**Modelo:**  Opus 5.5 xMedium
+**Herramienta:** Claude Code
+/opsx:propose sec-01-seguridad-api sigue la spec y las recomendaciones de OWASP Top 10 2025, los datos de terceras partes como yfinance deben ser filtrados como entrada insegura. Considera que mas tarde, fe-01-carga-watchlist va a implementar una entrada del usuario que debe ser filtrada y validada. Ademas incluye SEC-01 a seguridad-api con escenarios de fallo observables (precio negativo, maximo < minimo, etc), filtrado de fichero por extension XLSX, o mayores de 5 MB.
+
+Tras consultarme los cambios relevantes del ticket, continua con /opsx:apply sec-01-seguridad-api
+
 ---
 
 ## 7. Pull Requests
