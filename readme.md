@@ -83,7 +83,7 @@ Cada funcionalidad tiene su especificación viva en `openspec/specs/<capability>
 - S2: Exportación del informe a PDF/CSV.
 - S3 (ya especificada en `importacion-cartera`): cartera de ejemplo descargable, `cartera-ejemplo.xlsx`, con al menos 8 posiciones válidas de 4 tickers (abiertas y cerradas, Short-Term y Long-Term, ganancias y pérdidas); sirve también de plantilla, así que no hay una plantilla vacía aparte.
 
-**Flujo principal (núcleo del MVP):** subir XLSX → validar y persistir en PostgreSQL → mostrar la Watchlist con rendimiento y ST/LT (F1). Recorre frontend, backend y base de datos, y es el que se entregará operativo en la Entrega 2 con los tickets OPS-01, DB-01, SEC-01, BE-01a, BE-01b, BE-02, BE-07 y FE-01 (39 SP, sección 6). F2-F5 se construyen encima de las mismas posiciones y de los precios de mercado cacheados.
+**Flujo principal (núcleo del MVP):** subir XLSX → validar y persistir en PostgreSQL → mostrar la Watchlist con rendimiento y ST/LT (F1). Recorre frontend, backend y base de datos, y es el primero que se entregará operativo en la Entrega 2 con los tickets OPS-01, DB-01, SEC-01, BE-01a, BE-01b, BE-02, BE-07 y FE-01. La misma entrega añade el backtesting (F4) con BE-03, BE-04, BE-05, FE-03 y FE-04 (67 SP en total, sección 6). F2-F5 se construyen encima de las mismas posiciones y de los precios de mercado cacheados.
 
 **Fuera de alcance (MVP):** autenticación multiusuario, varias carteras, multidivisa, dividendos, *splits* manuales, saldo de efectivo, posiciones cortas, comisiones y deslizamiento en el backtest, ejecución real de órdenes, opciones/derivados.
 
@@ -1396,18 +1396,19 @@ Cada ticket añade solo su DoD específica.
 | FE-01 | Frontend | Carga y Watchlist (ticket 3) | HU-1 | 5 | BE-01b, BE-07, SEC-01 | 2 |
 | QA-01 | Test | Script de trazabilidad, E2E del flujo principal (8 pasos) y uso del generador de fixtures en los tests de seguridad | todas | 3 | OPS-01 | 2-3 (incremental) |
 | BE-08 | Backend | `GET /api/cartera/resumen` y `GET /api/cartera/ejemplo` | HU-1 | 3 | BE-07 | 3 |
-| BE-03 | Backend | TWR con flujos en días sin sesión, curva base 100 e índice de referencia | HU-2 | 5 | BE-02, BE-07 | 3 |
+| BE-03 | Backend | TWR con flujos en días sin sesión, curva base 100 e índice de referencia | HU-2 | 5 | BE-02, BE-07 | 2 |
 | FE-02 | Frontend | Panel de rentabilidad con comparación con el índice y curvas base 100 | HU-2 | 5 | BE-03 | 3 |
-| BE-04 | Backend | Puerto `IndicadoresTecnicos` con TA-Lib, histórico mínimo, señales e histórico | HU-3 | 5 | BE-02 | 3 |
-| FE-03 | Frontend | Selector de estrategia compartido, señales y gráfico | HU-3 | 5 | BE-04 | 3 |
-| BE-05 | Backend | Backtest (capital a coste, líneas base, métricas de riesgo, criterio de orden, sesgo) | HU-4 | 8 | BE-03, BE-04 | 3 |
-| FE-04 | Frontend | Sección de backtesting: comparativa con líneas base y métricas de riesgo, selector de orden, aviso de sesgo, curvas, mejoras y mensaje del `429` | HU-4 | 5 | BE-05 | 3 |
+| BE-04 | Backend | Puerto `IndicadoresTecnicos` con TA-Lib, histórico mínimo, señales e histórico | HU-3 | 5 | BE-02 | 2 |
+| FE-03 | Frontend | Selector de estrategia compartido, señales y gráfico | HU-3 | 5 | BE-04 | 2 |
+| BE-05 | Backend | Backtest (capital a coste, líneas base, métricas de riesgo, criterio de orden, sesgo) | HU-4 | 8 | BE-03, BE-04 | 2 |
+| FE-04 | Frontend | Sección de backtesting: comparativa con líneas base y métricas de riesgo, selector de orden, aviso de sesgo, curvas, mejoras y mensaje del `429` | HU-4 | 5 | BE-05, FE-03 | 2 |
 | BE-06 | Backend | Recomendaciones (cantidad por riesgo, antigüedad, wash sale, compra sin ATR excluida) | HU-5 | 5 | BE-04 | 3 |
 | FE-05 | Frontend | Panel de recomendaciones con cantidad y capital, campo de riesgo, etiqueta "Nueva", filtro de señales recientes y aviso de wash sale | HU-5 | 5 | BE-06 | 3 |
 | FE-06 | Frontend | Cabecera de resumen y descarga del ejemplo | HU-1 | 3 | BE-08, FE-01 | 3 |
 | REL-01 | DevOps | Job de release multiarquitectura a GHCR | — | 2 | OPS-01 | Final |
 
-- **Entrega 2:** OPS-01 + DB-01 + SEC-01 + BE-01a + BE-01b + BE-02 + BE-07 + FE-01 = **39 SP**. Si no caben, el orden del grafo permite entregar hasta BE-07 con una Watchlist mínima sin bloquear el resto; QA-01 es incremental.
+- **Entrega 2:** flujo principal (OPS-01 + DB-01 + SEC-01 + BE-01a + BE-01b + BE-02 + BE-07 + FE-01 = 39 SP) y backtesting completo con lo que necesita (BE-03 + BE-04 + BE-05 + FE-03 + FE-04 = 28 SP), en total **67 SP**. El backtesting entra en esta entrega para que no quede bloqueado por dependencias: BE-05 necesita la TWR (BE-03) y los indicadores (BE-04), y FE-04 el selector de estrategia compartido (FE-03). Orden de trabajo: el flujo principal hasta FE-01, que es el punto de corte seguro si falta tiempo, y después BE-03, BE-04, BE-05, FE-03 y FE-04; QA-01 es incremental.
+- **Entrega 3:** BE-08, FE-06, FE-02, BE-06 y FE-05 (21 SP); REL-01 al final.
 - **Estimaciones:** escala de Fibonacci. BE-02 y BE-05 se quedan en 8 porque dividirlos dejaría piezas que no se pueden probar por separado (normalización sin proveedor; métricas sin simulación).
 
 ```mermaid
@@ -1423,6 +1424,7 @@ flowchart LR
     BE03 --> FE02[FE-02] & BE05[BE-05]
     BE04 --> FE03[FE-03] & BE05 & BE06[BE-06]
     BE05 --> FE04[FE-04]
+    FE03 --> FE04
     BE06 --> FE05[FE-05]
     BE08 --> FE06[FE-06]
     FE01 --> FE06

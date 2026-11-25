@@ -35,8 +35,10 @@ context: |
 
   Entregas: la Entrega 1 (documentación técnica) está cerrada en la rama
   feature/entrega-1-sg, que no se modifica. En la Entrega 2 se implementa el flujo
-  principal con los tickets OPS-01, DB-01, SEC-01, BE-01a, BE-01b, BE-02, BE-07 y FE-01
-  (sección 6 del readme). Cada ticket es un change de OpenSpec con tareas de código;
+  principal con los tickets OPS-01, DB-01, SEC-01, BE-01a, BE-01b, BE-02, BE-07 y FE-01,
+  y el backtesting con BE-03, BE-04, BE-05, FE-03 y FE-04 (sección 6 del readme). Las
+  specs aún no implementadas quedan como pendientes en el script de trazabilidad con el
+  ticket que las cubrirá. Cada ticket es un change de OpenSpec con tareas de código;
   lleva skip_specs: true salvo que el ticket cambie comportamiento observable, en cuyo
   caso incluye su delta.
 
