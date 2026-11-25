@@ -46,7 +46,7 @@ No memorices nada.
 **Prompt 3:**
 **Modelo:** Opus 5.5 xHigh
 **Herramienta:** Claude Code
-/opsx:propose resuelve las divergencias entre las specs y el fichero readme.md que edite a mano. Las specs son la fuente de verdad.
+/opsx:propose resuelve las divergencias entre las specs y el fichero readme.md que edite a mano. Las specs son la fuente de verdad y he hecho una revision en plan mode con /ospx:explore antes de seguir adelante.
 
 ---
 
@@ -94,7 +94,7 @@ Al terminar, dime que features necesitan mas informacion y entrevistame para cua
 **Prompt 1:**
 **Modelo:** Opus 5.5 xHigh
 **Herramienta:** Claude Code
-Actúa como revisor de seguridad con OWASP como referencia. El vector de ataque principal es la subida de un fichero XLSX. Enumera en una tabla riesgo → control las amenazas concretas (zip bomb, `.xlsm` con macros, XXE, inyección de fórmulas, path traversal, abuso de la API, secretos, dependencias vulnerables y prompt injection en la feature opcional con LLM) indicando el código HTTP con el que se rechaza cada caso.
+Actúa como revisor de seguridad con OWASP Top 10 como referencia. El vector de ataque principal es la subida de un fichero XLSX. Enumera en una tabla riesgo → control las amenazas concretas (zip bomb, `.xlsm` con macros, XXE, inyección de fórmulas, path traversal, abuso de la API, secretos, dependencias vulnerables y prompt injection en la feature opcional con LLM) indicando el código HTTP con el que se rechaza cada caso.
 Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda seguridad en la aplicacion o en su codigo si no puedes definir claramente el requisito.
 
 ### **2.6. Tests**
