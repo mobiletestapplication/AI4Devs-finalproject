@@ -66,19 +66,23 @@ El sistema SHALL responder a `GET /api/cartera/posiciones` con `200 OK` y la lis
 - **THEN** el sistema responde `200 OK` con una lista vacía
 
 ### Requirement: Precio de referencia
-El sistema SHALL usar como precio de referencia la última cotización disponible del mercado para las posiciones abiertas y el precio de venta para las posiciones cerradas, y SHALL indicar que el precio no está disponible, sin calcular el rendimiento, cuando no pueda obtener la cotización de una posición abierta.
+El sistema SHALL usar como precio de referencia el último precio de cierre diario disponible, sin ajustar por splits, para las posiciones abiertas y el precio de venta para las posiciones cerradas, y SHALL indicar que el precio no está disponible, sin calcular el rendimiento, cuando no pueda obtener ningún cierre de una posición abierta.
 
 #### Scenario: Posición abierta
-- **WHEN** se consulta una posición abierta de `MSFT` y la última cotización disponible es 410,25 USD
-- **THEN** la posición tiene como precio de referencia 410,25 USD con la fecha y hora de esa cotización
+- **WHEN** se consulta una posición abierta de `MSFT` y el último cierre diario disponible, del 2025-03-07, es 410,25 USD
+- **THEN** la posición tiene como precio de referencia 410,25 USD con la fecha 2025-03-07
 
 #### Scenario: Posición cerrada
 - **WHEN** se consulta una posición cerrada vendida a 150 USD
 - **THEN** la posición tiene como precio de referencia 150 USD con la fecha de venta
 
 #### Scenario: Cotización no disponible
-- **WHEN** no se puede obtener cotización para el ticker de una posición abierta
+- **WHEN** no se puede obtener ningún cierre para el ticker de una posición abierta
 - **THEN** la posición se devuelve con precio de referencia y rendimiento vacíos y un motivo que indica que el precio no está disponible, y el resto de posiciones se devuelven con normalidad
+
+#### Scenario: Sin cotización intradía
+- **WHEN** se consulta una posición abierta de `MSFT` durante una sesión en curso cuyo cierre aún no existe
+- **THEN** el precio de referencia es el cierre de la sesión anterior con su fecha, el mismo que usa el cálculo de la TWR
 
 ### Requirement: Rendimiento total
 El sistema SHALL calcular el rendimiento total de cada posición como (precio de referencia − precio de compra) × cantidad en USD, y en porcentaje como (precio de referencia ÷ precio de compra − 1) × 100, de modo que en las posiciones abiertas refleje la ganancia o pérdida no realizada y en las cerradas la realizada.

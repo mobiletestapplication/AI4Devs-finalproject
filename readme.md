@@ -26,7 +26,7 @@ Aplicación web que importa una cartera de inversión simulada desde un fichero 
 
 ### **0.4. URL del proyecto:**
 
-Pendiente (Entrega Final). Despliegue opcional; evidencia mínima prevista: vídeo de 2-3 min + ejecución local con `docker compose`.
+Sin despliegue público: la aplicación se ejecuta solo en local con `docker compose` (sección 2.4) y se abre en `http://localhost:8080`. Evidencia prevista para la Entrega Final: vídeo de 2-3 min + ejecución local con las imágenes publicadas en GHCR o compilando con `--build`.
 > Puede ser pública o privada, en cuyo caso deberás compartir los accesos de manera segura. Puedes enviarlos a [alvaro@lidr.co](mailto:alvaro@lidr.co) usando algún servicio como [onetimesecret](https://onetimesecret.com/).
 
 ### 0.5. URL o archivo comprimido del repositorio
@@ -72,11 +72,11 @@ Cada funcionalidad tiene su especificación viva en `openspec/specs/<capability>
 
 | ID | Funcionalidad | Spec | Descripción |
 |---|---|---|---|
-| F1 | Importación y Watchlist con ST/LT | `importacion-cartera` | Carga de un XLSX de posiciones abiertas y cerradas en USD, validación completa (se rechaza el fichero entero si hay errores) y sustitución de la cartera única. Watchlist con precio de referencia (última cotización si está abierta, precio de venta si está cerrada), rendimiento total en USD y % y clasificación **Short-Term** (tenencia ≤ 1 año) o **Long-Term** (> 1 año). |
+| F1 | Importación y Watchlist con ST/LT | `importacion-cartera` | Carga de un XLSX de posiciones abiertas y cerradas en USD, validación completa (se rechaza el fichero entero si hay errores) y sustitución de la cartera única. Watchlist con precio de referencia (último cierre diario sin ajustar, con su fecha, si está abierta; precio de venta si está cerrada), rendimiento total en USD y % y clasificación **Short-Term** (tenencia ≤ 1 año) o **Long-Term** (> 1 año). |
 | F2 | TWR | `rentabilidad-twr` | Valoración diaria de la cartera al cierre de cada sesión, en la que las posiciones abiertas aportan su ganancia o pérdida no realizada hasta la última sesión con cierre disponible, y cálculo de la **Time-Weighted Rate of Return** tratando cada compra como aportación y cada venta como retirada. Salida: TWR acumulada, anualizada (no aplicable si el periodo < 365 días), mensual y por semana ISO. |
-| F3 | Estrategias por indicador | `estrategias-indicador` | Catálogo de estrategias de un único indicador sobre cierres diarios: **`rsi`** (RSI de Wilder 14, sobreventa 30, sobrecompra 70) y **`cruce-medias`** (SMA 50 / SMA 200). Para cada ticker con posición abierta, cada una emite Compra, Venta o Mantener con una intensidad 0-100 (o "Sin datos suficientes" con intensidad 0 si el histórico no alcanza), con el valor del indicador, la fecha de la sesión usada y la fecha desde la que se mantiene la señal. También ofrece el histórico diario de cierre, indicador y señal de un ticker (por defecto, el último año) con las fechas de cambio de señal. La estrategia y sus parámetros elegidos se comparten con el resto del dashboard. |
+| F3 | Estrategias por indicador | `estrategias-indicador` | Catálogo de estrategias de un único indicador sobre cierres diarios: **`rsi`** (RSI de Wilder 14, sobreventa 30, sobrecompra 70) y **`cruce-medias`** (SMA 50 / SMA 200). Para cada ticker con posición abierta, cada una emite Compra, Venta o Mantener con una intensidad 0-100 (o "Sin datos suficientes" con intensidad 0 si el histórico no alcanza el mínimo: el periodo en las SMA y el periodo + 100 sesiones en el RSI, por ejemplo 114 sesiones para RSI(14)), con el valor del indicador, la fecha de la sesión usada y la fecha desde la que se mantiene la señal. También ofrece el histórico diario de cierre, indicador y señal de un ticker (por defecto, el último año) con las fechas de cambio de señal. La estrategia y sus parámetros elegidos se comparten con el resto del dashboard. |
 | F4 | Backtesting | `backtesting` | Simula la estrategia seleccionada con sus parámetros y el resto del catálogo con sus parámetros por defecto sobre los tickers de la cartera desde la primera compra real, con el máximo capital invertido simultáneamente repartido a partes iguales, solo largos, sin comisiones ni deslizamiento y ejecutando a la apertura de la sesión siguiente. Métricas, también para la cartera real con las posiciones abiertas valoradas al último cierre disponible: TWR acumulada y anualizada, máximo drawdown, % de aciertos, ganancia y pérdida media, factor de beneficio y duración media. Compara contra la cartera real y propone tres tipos de mejora: estrategias que superan a la cartera real (en pp), ventas con ganancia como Short-Term en los 30 días anteriores a pasar a Long-Term, y compras reales hechas mientras la estrategia seleccionada emitía Venta, con su resultado agregado. |
-| F5 | Hasta 10 operaciones recomendadas | `operaciones-recomendadas` | Operaciones Comprar/Vender sobre los tickers con posición abierta, derivadas de las señales de la estrategia seleccionada (las señales Mantener y "Sin datos suficientes" se excluyen), ordenadas por intensidad (empate: ticker alfabético), una por ticker. Cada una indica el precio de referencia (último cierre disponible), el motivo con el valor del indicador y los umbrales o medias de la estrategia, y la fecha de la sesión usada. Las compras incluyen stop-loss (precio − 2 × ATR 14) y objetivo (precio + 3 × ATR 14); las ventas incluyen la cantidad abierta y un aviso fiscal si una posición con ganancia está a ≤ 30 días de pasar a Long-Term. |
+| F5 | Hasta 10 operaciones recomendadas | `operaciones-recomendadas` | Operaciones Comprar/Vender sobre los tickers con posición abierta, derivadas de las señales de la estrategia seleccionada (se excluyen las señales Mantener y "Sin datos suficientes", y las Compra de tickers sin histórico suficiente para el ATR(14), es decir, con menos de 114 sesiones), ordenadas por intensidad (empate: ticker alfabético), una por ticker. Cada una indica el precio de referencia (último cierre disponible), el motivo con el valor del indicador y los umbrales o medias de la estrategia, y la fecha de la sesión usada. Las compras incluyen stop-loss (precio − 2 × ATR 14) y objetivo (precio + 3 × ATR 14); las ventas incluyen la cantidad abierta y un aviso fiscal si una posición con ganancia está a ≤ 30 días de pasar a Long-Term. |
 
 **Should-have (opcional, sin spec todavía; se añadirán como *change* de OpenSpec si se abordan)**
 - S1: Justificación en lenguaje natural de cada recomendación generada por LLM con salida estructurada (JSON validado), sin influir en el orden de las recomendaciones.
@@ -92,7 +92,8 @@ Cada funcionalidad tiene su especificación viva en `openspec/specs/<capability>
 - **Cartera única**: cada importación válida sustituye por completo a la anterior; simplifica el modelo y la API (sin identificadores de cartera).
 - **Sin saldo de efectivo**: cada compra es una aportación externa y cada venta una retirada, lo que permite calcular la TWR solo con las posiciones.
 - **Moneda única (USD)** para evitar conversión FX en el cálculo de TWR.
-- **Datos de mercado diarios** cacheados en BD; todos los indicadores trabajan sobre la temporalidad diaria.
+- **Datos de mercado diarios** cacheados en BD; todos los indicadores trabajan sobre la temporalidad diaria. Las posiciones abiertas se valoran al último cierre diario, sin cotizaciones intradía.
+- **Limitación por splits:** los indicadores y el backtest usan precios ajustados por splits, pero si hay un split *durante* la tenencia de una posición, la cantidad y los precios del XLSX no se ajustan y su valoración queda falseada desde esa fecha, porque gestionar splits en las posiciones está fuera de alcance.
 
 
 
@@ -112,15 +113,25 @@ Avisos permanentes: "Las señales son orientativas y no constituyen asesoramient
 
 ### **1.4. Instrucciones de instalación:**
 > Documenta de manera precisa las instrucciones para instalar y poner en marcha el proyecto en local (librerías, backend, frontend, servidor, base de datos, migraciones y semillas de datos, etc.)
-> No requerido en la Entrega 1. Se completará en la Entrega 2 (incluirá `.env.example` con variables vacías, seed de datos de prueba y `docker-compose`). Previsto:
+> No requerido en la Entrega 1. Se completará en la Entrega 2 (incluirá `.env.example` sin secretos, seed con la cartera de ejemplo y `compose.yaml`). Previsto (detalle en la sección 2.4):
 ```bash
 git clone https://github.com/mobiletestapplication/AI4Devs-finalproject.git
-cp .env.example .env          # variables vacías, sin secretos
-docker compose up -d --build  # db + api + web
-docker compose exec api alembic upgrade head
-docker compose exec api python -m app.scripts.seed   # cartera de ejemplo
-# Frontend: http://localhost:5173  ·  API docs: http://localhost:8000/docs
+cd AI4Devs-finalproject
+cp .env.example .env          # sin secretos; PROVEEDOR_PRECIOS=ficheros para la demo sin conexión
+
+# Vía 1: imágenes publicadas en GHCR
+docker compose pull
+docker compose -f compose.yaml up -d
+# Vía 2: compilar en local
+docker compose -f compose.yaml up -d --build
+# db arranca y espera a responder, migrate aplica las migraciones y termina, después arrancan api y web
+
+docker compose exec api python -m app.scripts.seed   # opcional: carga cartera-ejemplo.xlsx
+# Aplicación: http://localhost:8080  ·  API docs: http://localhost:8080/api/docs
+
+docker compose down           # conserva el volumen pgdata; down -v borra cartera y caché de precios
 ```
+Modo desarrollo: `docker compose up` carga también `compose.override.yaml` (Vite en `http://localhost:5173`, `uvicorn --reload` y el código montado desde el disco).
 
 ---
 
@@ -132,31 +143,87 @@ docker compose exec api python -m app.scripts.seed   # cartera de ejemplo
 
 ```mermaid
 flowchart LR
-    U[Usuario<br/>Navegador] -->|HTTPS| FE[Frontend SPA<br/>React + Vite + TS]
-    FE -->|REST/JSON| API[Backend API<br/>FastAPI]
+    U[Persona<br/>Navegador] -->|HTTP local| FE[Frontend SPA<br/>React 18 + TS + Vite<br/>TanStack Query/Table · Recharts · Lightweight Charts]
+    FE -->|REST/JSON| API
 
-    subgraph Backend [Monolito modular - Python]
-        API --> APP[Capa de aplicación<br/>casos de uso]
-        APP --> DOM[Dominio puro<br/>posiciones · twr · indicadores · backtest · recomendaciones]
-        APP --> ING[Adaptador XLSX<br/>openpyxl + defusedxml]
-        APP --> MD[Adaptador MarketData<br/>interfaz + proveedor]
-        APP --> REPO[Repositorios<br/>SQLAlchemy]
-        APP -.opcional S1.-> LLM[Adaptador LLM<br/>salida JSON validada]
+    subgraph Backend [Monolito modular · Python 3.12 · fronteras comprobadas con import-linter]
+        API[API<br/>FastAPI + Pydantic v2<br/>mapeo de errores a HTTP] --> APP[Casos de uso<br/>importar · posiciones · twr · señales · backtest · recomendaciones]
+
+        subgraph DOM [Dominio puro · sin I/O · pandas + Decimal]
+            POS[posiciones<br/>rendimiento · ST/LT]
+            TWR[twr<br/>valoración diaria · encadenado]
+            IND[indicadores<br/>RSI · SMA · ATR Wilder]
+            EST[estrategias<br/>reglas · intensidad]
+            BT[backtest<br/>simulación · métricas · mejoras]
+            REC[recomendaciones<br/>top 10 · stop/objetivo · aviso fiscal]
+        end
+
+        APP --> DOM
+        APP --> MDS[Servicio de datos de mercado<br/>rango con calentamiento · calendario · refresco]
+
+        subgraph PORTS [Puertos]
+            P1[[LectorCartera]]
+            P2[[ProveedorPrecios]]
+            P3[[RepositorioCartera]]
+            P4[[CachePrecios]]
+            P5[[Reloj]]
+            P6[[ClienteLLM · S1 opcional]]
+            P7[[IndicadoresTecnicos]]
+        end
+
+        APP --> P1 & P3 & P5 & P6
+        DOM --> P7
+        MDS --> P2 & P4
     end
 
-    REPO --> DB[(PostgreSQL 16)]
-    MD -->|cache-aside| DB
-    MD -->|HTTP| EXT[Proveedor de precios<br/>yfinance / Stooq / Alpha Vantage]
+    P1 -.-> XLSX[Adaptador XLSX<br/>openpyxl read_only + defusedxml]
+    P2 -.-> PRV[Adaptador proveedor<br/>yfinance: OHLC ajustado por splits<br/>+ eventos de split]
+    P3 -.-> SQL[Repositorios<br/>SQLAlchemy 2 + Alembic]
+    P4 -.-> SQL
+    P5 -.-> CLK[Reloj del sistema<br/>fijo en tests]
+    P7 -.-> TAL[Adaptador TA-Lib<br/>RSI · SMA · ATR · futuros MACD/Bollinger]
+    P6 -.-> LLM[Adaptador LLM<br/>salida JSON validada]
+    SQL --> DB[(PostgreSQL 16)]
+    PRV -->|HTTP| EXT[Proveedor externo gratuito]
 ```
 
-**Patrón:** monolito modular con arquitectura en capas inspirada en *hexagonal* (puertos y adaptadores).
-- El **dominio** (rendimiento y ST/LT, TWR, RSI/SMA/ATR, motor de backtest, selección de recomendaciones) son funciones puras sin I/O → testeables con unit tests deterministas.
-- Los **adaptadores** (XLSX, proveedor de precios, BD, LLM) se inyectan detrás de interfaces → en tests se sustituyen por *fakes* con datos fijos.
+**Patrón:** monolito modular con arquitectura *hexagonal* (puertos y adaptadores): dominio, casos de uso, siete puertos y sus adaptadores.
+- El **dominio** (rendimiento y ST/LT, TWR, indicadores, estrategias, motor de backtest, selección de recomendaciones) son funciones puras sin I/O → se prueban con tests unitarios deterministas usando los ejemplos numéricos de las specs.
+- Los **adaptadores** (XLSX, proveedor de precios, BD, TA-Lib, reloj, LLM) se inyectan detrás de puertos → en tests se sustituyen por *fakes* con datos fijos.
 - Señales, TWR, backtests y recomendaciones se **calculan bajo demanda** a partir de las posiciones vigentes y de los precios cacheados; no se persisten.
+- **Dependencias del dominio, sin ciclos:** `posiciones → twr → backtest`, `indicadores → estrategias → backtest` y `estrategias, indicadores, posiciones → recomendaciones`. El dominio no importa nada de los adaptadores ni de la infraestructura; un contrato de **import-linter** en CI lo comprueba.
 
-**Por qué:** alcance de MVP, un solo desarrollador, despliegue simple (un contenedor de API) y máxima testabilidad de la lógica financiera, que es el núcleo de valor.
+| Módulo de dominio | Entrada | Salida | Spec |
+|---|---|---|---|
+| posiciones | posiciones, precio de referencia, fecha actual | rendimiento, días de tenencia, ST/LT | importacion-cartera |
+| twr | posiciones, cierres sin ajustar, calendario | rentabilidades diarias, TWR, series, curva | rentabilidad-twr |
+| indicadores | OHLC ajustado por splits | RSI, SMA y ATR de Wilder (calculados por el puerto `IndicadoresTecnicos`), mínimo de sesiones | estrategias-indicador |
+| estrategias | indicadores y parámetros | señal, intensidad, fecha de inicio | estrategias-indicador |
+| backtest | posiciones, OHLC ajustado con calentamiento | simulaciones, métricas, comparativa, mejoras | backtesting |
+| recomendaciones | señales, ATR, posiciones, fecha actual | hasta 10 operaciones con niveles y avisos | operaciones-recomendadas |
 
-**Sacrificios:** sin escalado independiente de componentes; backtests síncronos en lugar de cola de trabajos; dependencia de un proveedor de datos externo no garantizado (mitigado con caché, abstracción y respuestas `503` explícitas cuando no está disponible).
+**Monolito modular frente a microservicios:**
+| Criterio | Monolito modular | Microservicios |
+|---|---|---|
+| Equipo de 1 persona | Un repositorio, un despliegue, un pipeline | N servicios, N pipelines, contratos entre servicios |
+| Datos compartidos | F1-F5 leen las mismas posiciones y precios en una BD transaccional | Duplicar o consultar en remoto posiciones y precios |
+| Acoplamiento real | F4 reutiliza F2 y F3; F5 usa F3 y F1 | Cadenas síncronas (backtest → señales → precios) con latencia y fallos parciales |
+| Importación atómica | Una transacción | Sagas o consistencia eventual |
+| Escalado | Innecesario: un usuario | Independiente, sin necesidad |
+| Observabilidad | Logs de un proceso | Trazas distribuidas |
+
+**Decisiones transversales:**
+- **Precio de referencia = último cierre diario** sin ajustar, con la fecha de esa sesión, para la Watchlist, el resumen y las recomendaciones: es la misma serie que valora la TWR. No se piden cotizaciones intradía; durante la sesión se muestra el cierre anterior y la fecha visible lo aclara.
+- **Dos series de precios:** cierre sin ajustar para valorar posiciones (Watchlist, rendimiento, TWR), coherente con los precios del XLSX, y OHLC ajustado por splits para indicadores, ATR, backtest e histórico de señales, para que un split no genere señales falsas. La reconstrucción está en la sección 3.2.
+- **Fecha actual inyectada** con el puerto `Reloj` (zona de Nueva York), fija en los tests.
+- **Errores de dominio traducidos a HTTP en un único manejador** (`409`, `422`, `503`, `404`, `400`; ver sección 4).
+- **`Decimal` frente a float:** `Decimal`/`NUMERIC` para importes, cantidades, precios almacenados, rendimiento por posición, stop-loss y objetivo; float64 (pandas) para las series de rentabilidades, la TWR y los indicadores. Redondeo explícito al serializar: 6 decimales en las rentabilidades y 2 en los importes.
+
+**Por qué:** alcance de MVP, una sola persona desarrollando, un solo `docker compose` y máxima testabilidad de la lógica financiera, que es el núcleo de valor.
+
+**Beneficios:** el dominio se prueba sin red; el proveedor de precios es intercambiable; la importación es atómica; las features nuevas solo añaden módulos.
+
+**Sacrificios:** sin escalado independiente de componentes; backtest síncrono, que puede tardar segundos con la caché fría y se mitiga con el indicador de progreso que exige la spec; la disciplina de módulos la imponen la convención y el CI, no la red; dependencia de un proveedor de datos externo no garantizado (mitigado con caché, puerto y respuestas `503` explícitas).
 
 
 ### **2.2. Descripción de componentes principales:**
@@ -165,16 +232,50 @@ flowchart LR
 
 | Componente | Tecnología | Responsabilidad |
 |---|---|---|
-| Frontend SPA | React 18, TypeScript, Vite, TanStack Query/Table, Recharts, Lightweight Charts | UI, carga del fichero, tablas, gráficos y estrategia seleccionada compartida entre secciones |
-| API REST | FastAPI, Pydantic v2, Uvicorn | Validación de entrada/salida, OpenAPI autogenerado |
-| Ingesta XLSX | openpyxl (`read_only`, `data_only`) + defusedxml | Parseo seguro, cabeceras sin importar orden ni mayúsculas, validación por fila (cantidad > 0, fechas no futuras, venta ≥ compra, venta completa; precios > 0 como *control de diseño, pendiente de spec*) |
-| Motor de posiciones | Python puro | Precio de referencia, rendimiento total, días de tenencia y plusvalía ST/LT |
-| Motor TWR | pandas | Valoración diaria, rentabilidad diaria con aportaciones y retiradas, encadenado acumulado, anualizado, mensual y semanal ISO |
-| Indicadores y estrategias | pandas (implementación propia validada contra valores de referencia) | RSI de Wilder, SMA, ATR de Wilder; reglas e intensidad de `rsi` y `cruce-medias` |
-| Motor de backtest | Implementación propia | Simulación sin sesgo de anticipación, métricas, comparativa y propuestas de mejora |
-| Recomendaciones (F5) | Python puro | Selección de hasta 10 operaciones, stop-loss/objetivo por ATR y aviso fiscal |
-| MarketData | Interfaz `PriceProvider` + implementación | Descarga OHLC diario y última cotización; caché en `precio_diario` |
-| Base de datos | PostgreSQL 16, SQLAlchemy 2, Alembic | Persistencia y migraciones |
+| Frontend SPA | React 18 + TypeScript + Vite | Carga del XLSX, Watchlist, paneles de TWR, señales, backtest y recomendaciones; estrategia seleccionada compartida; avisos legales |
+| Datos del servidor y tablas | TanStack Query · TanStack Table | Caché de peticiones y recarga tras importar; ordenación y filtros |
+| Gráficos | Recharts · Lightweight Charts | Barras de TWR y curvas base 100; precio con el indicador en un panel inferior y marcas de cambio de señal |
+| API REST | FastAPI · Pydantic v2 · Uvicorn | Validación, OpenAPI y traducción centralizada de errores, con `application/problem+json` y `Retry-After` |
+| Casos de uso | Python | Un caso de uso por operación; orquestan dominio y puertos; transacción de la importación |
+| Servicio de datos de mercado | Python · pandas | Rango con calentamiento, calendario, cobertura y refresco, barra del día, invalidación por split, normalización a dos series y caché desactualizada |
+| Dominio · posiciones | Python · `Decimal` | Precio de referencia, rendimiento, días de tenencia y ST/LT |
+| Dominio · TWR | pandas (float64) | Valoración diaria sin ajustar, rentabilidad con flujos, TWR acumulada, anualizada, mensual y semanal, curva base 100 |
+| Dominio · indicadores | Python, sobre el puerto `IndicadoresTecnicos` | Histórico mínimo, "Sin datos suficientes" y alineación de series |
+| Dominio · estrategias | Python | Catálogo, validación de parámetros, reglas, intensidad y fecha de inicio de la señal |
+| Dominio · backtest | pandas | Simulación sin sesgo de anticipación, métricas, comparativa y mejoras |
+| Dominio · recomendaciones | Python · `Decimal` | Hasta 10 operaciones, stop-loss y objetivo por ATR, aviso fiscal |
+| Adaptador XLSX | openpyxl · defusedxml | Seguridad del fichero, parseo, cabeceras flexibles y validación por fila (cantidad > 0, fechas no futuras, venta ≥ compra, venta completa; precios > 0 como *control de diseño, pendiente de spec*) |
+| Adaptador proveedor de precios | yfinance (`auto_adjust=False`) · proveedor de ficheros | OHLC y splits; errores clasificados, traducción de símbolos y conversión a `Decimal` |
+| Adaptador indicadores | TA-Lib ≥ 0.6.5 | RSI, SMA y ATR de Wilder, y los indicadores futuros |
+| Repositorios y caché | SQLAlchemy 2 · Alembic | Cartera vigente atómica, `PRECIO_DIARIO` y `COBERTURA_PRECIO` con upsert; migraciones |
+| Reloj | `datetime` · `zoneinfo` | Fecha y hora con zona de Nueva York; fijo en tests |
+| Cliente LLM (S1, opcional) | SDK del proveedor de LLM | Justificación con salida JSON validada; no influye en el orden |
+| Base de datos | PostgreSQL 16 | `NUMERIC`, CHECK y transacciones |
+| Calidad de arquitectura | import-linter · ruff · mypy | Que el dominio no importe adaptadores (incluido TA-Lib) ni infraestructura; lint y tipos |
+
+**Servicio de datos de mercado:**
+- **Rango con calentamiento:** desde la primera compra menos el máximo de sesiones que necesitan la estrategia y el ATR(14), × 1,5 para pasar a días naturales, hasta hoy; una sola vez por petición para todos los tickers. Con los parámetros por defecto son 300 días (200 sesiones × 1,5).
+- **Calendario de sesiones:** la unión de las fechas con datos de los tickers de la cartera; los huecos de un ticker se rellenan con su cierre anterior. No hace falta una librería de calendario bursátil.
+- **Cobertura y refresco:** `COBERTURA_PRECIO` registra el rango ya pedido por ticker y solo se descarga lo que falta por cada extremo. Las fechas pasadas son inmutables; se vuelve a pedir desde `hasta` cuando la cobertura tiene más de 6 horas, en un único lote, con upsert.
+- **Sin barra del día en curso:** se descarta la barra con fecha de hoy en Nueva York hasta las 16:15 ET, porque durante la sesión no es un cierre.
+- **Invalidación por split:** si el proveedor informa de un split posterior a `ultimo_split`, se vuelve a descargar todo el histórico del ticker.
+
+**Proveedor de precios:** yfinance es el único proveedor real, con `auto_adjust=False` y todos los tickers en una llamada, más un **proveedor de ficheros** (CSV en `app/recursos/precios-demo/`) para los tests y la demo sin conexión. No hay respaldo automático: mezclar proveedores daría series inconsistentes de un mismo ticker.
+
+| Criterio | yfinance | Stooq | Alpha Vantage (gratis) |
+|---|---|---|---|
+| Clave de API | No | Según algunas fuentes, sí | Sí |
+| Histórico | Completo | Completo | Solo 100 días: no cubre el calentamiento de 200 sesiones |
+| Varios tickers por petición | Sí | No | No |
+| Eventos de split | Sí | No | No |
+
+Contrato del puerto `ProveedorPrecios`:
+- recibe los tickers y un rango, y devuelve por ticker el OHLC tal como lo da el proveedor, el tipo de ajuste y los eventos de split;
+- clasifica los errores en `ProveedorNoDisponible` (red, timeout, límite de peticiones, error del servidor, HTML en lugar de datos) y `TickerSinDatos` (respuesta sin filas);
+- traduce los símbolos en los dos sentidos (`BRK.B` ↔ `BRK-B`) y convierte los float a `Decimal` con 6 decimales;
+- timeout de 10 s y 2 reintentos con espera creciente solo ante límite de peticiones o error del servidor; tras un fallo, 60 s sin volver a llamar.
+
+**Indicadores:** el catálogo de estrategias crecerá (MACD, Bollinger…), así que el cálculo numérico se delega en TA-Lib detrás del puerto `IndicadoresTecnicos`. Las reglas de señal, la intensidad, "Sin datos suficientes" y la fecha de inicio de la señal siguen siendo lógica propia. Se descartan una implementación propia en producción (no escala) y pandas-ta (riesgo de mantenimiento).
 
 ### **2.3. Descripción de alto nivel del proyecto y estructura de ficheros**
 
@@ -182,64 +283,167 @@ flowchart LR
 
 ```
 .
-├── backend/
-│   ├── app/
-│   │   ├── api/            # routers FastAPI, schemas Pydantic
-│   │   ├── application/    # casos de uso (importar_cartera, calcular_twr, ejecutar_backtest…)
-│   │   ├── domain/         # lógica pura: posiciones.py, twr.py, indicadores.py, estrategias.py, backtest.py, recomendaciones.py
-│   │   ├── adapters/       # xlsx_parser.py, price_provider.py, llm_client.py
-│   │   ├── infrastructure/ # db/session.py, models.py, repositories.py
-│   │   └── scripts/        # seed.py
-│   ├── alembic/
-│   └── tests/
-│       ├── unit/ · integration/ · fixtures/ (xlsx válidos y maliciosos, precios)
-├── frontend/
-│   ├── src/ (pages/, components/, api/, hooks/)
-│   └── e2e/                # Playwright
-├── docs/                   # diagramas, ADRs
-├── openspec/               # Spec-Driven Development (fuente de verdad de requisitos)
-│   ├── config.yaml         # contexto del proyecto y reglas para el agente
-│   ├── specs/              # especificaciones vigentes por capability
-│   │   ├── importacion-cartera/ · rentabilidad-twr/ · estrategias-indicador/
-│   │   └── backtesting/ · operaciones-recomendadas/
-│   └── changes/            # cambios propuestos: proposal · specs · design · tasks
-│       └── archive/        # cambios ya implementados y archivados
-├── docker-compose.yml
-├── .env.example
-├── CLAUDE.md               # contexto y reglas para el agente de IA
-├── readme.md
-└── prompts.md
++-- .claude/                    # comandos y skills de OpenSpec para el agente
++-- .github/workflows/ci.yml    # lint, tipos, import-linter, tests, auditorías y secretos
++-- backend/
+|   +-- pyproject.toml  uv.lock # dependencias (uv), ruff, mypy y contratos de import-linter
+|   +-- alembic/                # migraciones versionadas
+|   +-- app/
+|   |   +-- main.py             # punto de arranque: crea FastAPI y conecta puertos y adaptadores
+|   |   +-- api/                # capa HTTP
+|   |   |   +-- routers/        #   cartera.py, rentabilidad.py, estrategias.py, backtests.py, recomendaciones.py
+|   |   |   +-- errores.py      #   excepciones de dominio -> HTTP y problem+json
+|   |   |   +-- dependencias.py #   inyección de casos de uso y adaptadores
+|   |   +-- application/        # casos de uso: orquestan dominio y puertos, sin lógica financiera
+|   |   |   +-- puertos.py      #   LectorCartera, ProveedorPrecios, RepositorioCartera, CachePrecios, Reloj, ClienteLLM
+|   |   |   +-- mercado.py      #   servicio de datos de mercado: rango, cobertura, refresco, caché desactualizada
+|   |   |   +-- importar_cartera.py, consultar_posiciones.py, calcular_twr.py,
+|   |   |       calcular_senales.py, ejecutar_backtest.py, recomendar_operaciones.py
+|   |   +-- domain/             # lógica financiera pura: solo stdlib, pandas y numpy
+|   |   |   +-- modelos.py      #   Posicion, SerieDiaria, Senal... (dataclasses)
+|   |   |   +-- errores.py      #   CarteraNoImportada, TickersSinHistorico, ParametrosNoValidos...
+|   |   |   +-- posiciones.py   #   rendimiento, días de tenencia, ST/LT
+|   |   |   +-- mercado.py      #   normalización a dos series, calendario de sesiones
+|   |   |   +-- twr.py
+|   |   |   +-- indicadores/    #   puerto.py (IndicadoresTecnicos) + histórico mínimo
+|   |   |   +-- estrategias/    #   catalogo.py, rsi.py, cruce_medias.py (un fichero por estrategia)
+|   |   |   +-- backtest.py
+|   |   |   +-- recomendaciones.py
+|   |   +-- adapters/           # implementaciones de puertos contra sistemas externos y librerías
+|   |   |   +-- xlsx/lector_xlsx.py        # openpyxl + defusedxml
+|   |   |   +-- precios/yfinance.py, ficheros.py
+|   |   |   +-- indicadores/talib.py
+|   |   |   +-- llm/cliente_llm.py         # S1 (opcional)
+|   |   |   +-- reloj.py
+|   |   +-- infrastructure/     # persistencia y configuración
+|   |   |   +-- config.py       #   ajustes por entorno (BENCHMARK_TICKER, proveedor, BD)
+|   |   |   +-- db/             #   session.py, modelos ORM, repositorios (RepositorioCartera, CachePrecios)
+|   |   +-- recursos/           # ficheros incluidos en la imagen
+|   |   |   +-- cartera-ejemplo.xlsx   # GET /api/cartera/ejemplo, seed y tests
+|   |   |   +-- precios-demo/          # CSV del proveedor de ficheros (demo sin conexión)
+|   |   +-- scripts/seed.py
+|   +-- tests/
+|       +-- unit/               # dominio con los ejemplos numéricos de las specs; reloj fijo
+|       +-- contract/           # adaptadores de precios e indicadores (TA-Lib frente a StockCharts)
+|       +-- integration/        # API + PostgreSQL (Testcontainers) con el proveedor de ficheros
+|       +-- fixtures/           # XLSX maliciosos y no válidos (solo tests)
++-- frontend/
+|   +-- src/
+|   |   +-- app/                # router, proveedores (TanStack Query), estrategia seleccionada
+|   |   +-- features/           # cartera/, rentabilidad/, estrategias/, backtesting/, recomendaciones/
+|   |   |                       #   cada una con api.ts, componentes y hooks propios
+|   |   +-- shared/
+|   |       +-- api/            # cliente HTTP y tipos generados desde el OpenAPI (openapi-typescript)
+|   |       +-- ui/             # avisos legales, etiquetas de color, formato de USD y %
+|   +-- e2e/                    # Playwright
++-- docs/                       # wireframes y capturas
++-- openspec/
+|   +-- config.yaml             # contexto y reglas del proyecto para el agente
+|   +-- specs/<capability>/spec.md   # verdad vigente
+|   +-- changes/<change>/       # proposal, specs (deltas), design, tasks
+|       +-- archive/            # changes aplicados; su design.md hace de ADR
++-- compose.yaml  compose.override.yaml  .env.example  CLAUDE.md  readme.md  prompts.md
 ```
 
-**Trazabilidad OpenSpec → readme:**
+**Reglas de dependencias:**
+- **Backend** (contratos de import-linter en `pyproject.toml`): `api → application → domain`; `adapters` e `infrastructure` solo dependen de `application.puertos` y de `domain.indicadores.puerto`; `domain` no importa nada de `api`, `application`, `adapters` ni `infrastructure`, ni FastAPI, SQLAlchemy, yfinance, openpyxl o TA-Lib.
+- **Frontend** (ESLint `import/no-restricted-paths`): una feature no importa otra; lo común pasa por `shared/`.
+- `IndicadoresTecnicos` vive en `domain/` y no en `application/` porque es un puerto de cálculo puro que usa el propio dominio, no un puerto de I/O.
 
-| Artefacto en `openspec/` | Sección de este documento |
-|---|---|
-| `changes/<change>/proposal.md` | 1.1 Objetivo · 1.2 Funcionalidades |
-| `specs/*/spec.md` (requisitos + escenarios) | 1.2 Funcionalidades · 1.3 Diseño · 4. API · 5. Historias de usuario |
-| `changes/<change>/design.md` | 2. Arquitectura · 3. Modelo de datos |
-| `changes/<change>/tasks.md` | 6. Tickets de trabajo |
+**Convenciones:**
+- **Idioma de los identificadores:** dominio, puertos, casos de uso y adaptadores en castellano, con el vocabulario de las specs; en inglés solo lo que impone el framework o la convención (`main.py`, `config.py`, `session.py`, `routers/`) y los nombres de producto (`yfinance.py`, `talib.py`).
+- **Frontend por feature:** cada change de una feature toca una sola carpeta.
+- **uv** como gestor de dependencias del backend: `uv sync --frozen` en Docker y CI fija pandas, numpy y TA-Lib, de modo que los resultados numéricos no cambian entre entornos.
+- **Recursos en `app/recursos/`:** el XLSX de ejemplo y los precios de demo se usan en ejecución, así que no pueden estar en `tests/`, que no se copia a la imagen. `tests/fixtures/` queda solo para ficheros no válidos o maliciosos.
+- **Sin ADR en `docs/`:** el `design.md` de cada change archivado hace de registro de decisiones.
+
+**Trazabilidad OpenSpec → readme.** Precedencia: las specs prevalecen sobre `design.md` y este sobre el readme. El apply de un change actualiza las secciones de esta tabla y el archive comprueba que el readme no contradice las specs.
+
+| Sección del readme | Artefacto de origen | Qué se toma | Se actualiza al |
+|---|---|---|---|
+| 0. Ficha | — (manual) | Datos de la entrega | — |
+| 1.1 Objetivo | `proposal.md` (Why) · `config.yaml` (contexto) | Problema, valor y destinatarios | apply |
+| 1.2 Funcionalidades | `specs/*/spec.md` (Purpose y requisitos) · `proposal.md` (What Changes, Fuera de alcance) | Tabla F1-F5, S1-S3, alcance | apply y archive |
+| 1.3 Diseño y UX | `specs/*/spec.md` (requisitos "en pantalla") | Elementos visibles y avisos | apply |
+| 1.4 Instalación | `tasks.md` (DevOps) · `design.md` (Migration Plan) | Pasos y variables de entorno | apply |
+| 2.1 Diagrama | `design.md` (Decisions, Mermaid) | Patrón, componentes, beneficios y sacrificios | apply |
+| 2.2 Componentes | `design.md` (tabla de componentes) | Componente, tecnología y responsabilidad | apply |
+| 2.3 Estructura | `design.md` (estructura y reglas de dependencias) | Árbol, propósito de cada directorio y esta tabla | apply |
+| 2.4 Infraestructura | `design.md` (despliegue) · `tasks.md` (DevOps) | Compose y CI | apply |
+| 2.5 Seguridad | `design.md` (seguridad) · `specs` (rechazos con código HTTP) | Riesgo y control; controles pendientes de spec marcados | apply |
+| 2.6 Tests | `specs` (escenarios WHEN/THEN) · `tasks.md` (Tests) | Casos con sus valores numéricos | apply |
+| 2.7 Stack | `design.md` · `config.yaml` (stack previsto) | Tecnología y motivo | apply |
+| 3. Modelo de datos | `design.md` (erDiagram) | Entidades, claves, restricciones y fórmulas | apply |
+| 4. API | `specs` (requisitos "por HTTP") | Endpoints, códigos y OpenAPI | apply y archive |
+| 5. Historias de usuario | `specs` (escenarios) · `proposal.md` (F/HU) | Gherkin con ejemplos | apply |
+| 6. Tickets | `tasks.md` | Tareas, criterios de aceptación y backlog | apply |
+| 7. Pull requests | — (un PR por change, si se usan) | Enlace y resumen | merge |
 
 
 ### **2.4. Infraestructura y despliegue**
 
 > Detalla la infraestructura del proyecto, incluyendo un diagrama en el formato que creas conveniente, y explica el proceso de despliegue que se sigue
-> Despliegue opcional y no requerido en la Entrega 1; se documenta el plan previsto.
+
+La aplicación se ejecuta **solo en local** con Docker Compose; no hay despliegue en un entorno público. Sin autenticación, cualquier visitante de un despliegue público podría sustituir la cartera única; un despliegue en la nube queda como evolución futura que exige añadir antes la autenticación.
 
 ```mermaid
 flowchart LR
-    DEV[Dev local] -->|push| GH[GitHub]
-    GH --> CI[GitHub Actions<br/>lint · tests · pip-audit · npm audit · gitleaks]
-    CI -->|opcional| DEP[Render / Railway / Fly.io]
-    subgraph docker-compose
-        WEB[web: nginx + build React] --> APIC[api: FastAPI]
-        APIC --> PG[(db: postgres)]
+    subgraph Local [Máquina local · docker compose · puertos en 127.0.0.1]
+        B[Navegador] -->|:8080| WEB[web<br/>nginx-unprivileged<br/>SPA + proxy /api<br/>client_max_body_size 6m · CSP]
+        WEB -->|/api| API[api<br/>python:3.12-slim + uv<br/>FastAPI · TA-Lib · sin privilegios]
+        MIG[migrate<br/>alembic upgrade head] -->|completado| API
+        API --> DB[(db<br/>postgres:16<br/>volumen pgdata)]
+        MIG --> DB
+        API -->|PROVEEDOR_PRECIOS=yfinance| YF[Yahoo Finance]
+        API -.->|PROVEEDOR_PRECIOS=ficheros| CSV[app/recursos/precios-demo]
     end
+
+    subgraph CI [GitHub Actions]
+        J0[openspec] & J1[backend-calidad] & J2[backend-tests] & J3[frontend] & J4[seguridad]
+        J1 & J2 & J3 --> J5[e2e]
+        J0 & J4 & J5 -->|etiqueta v*| REL[release<br/>buildx amd64 + arm64]
+    end
+
+    REL --> GHCR[(ghcr.io<br/>traide-api · traide-web)]
+    GHCR -->|docker compose pull| Local
 ```
 
-- **Local:** `docker compose` con 3 servicios (`db`, `api`, `web`).
-- **CI:** en cada push → ruff/mypy, eslint, pytest (unit + integración con Postgres de servicio), Vitest, Playwright, análisis de dependencias y secretos.
-- **Despliegue (opcional):** imagen de la API + Postgres gestionado; frontend estático.
+**Servicios de `compose.yaml`:**
+| Servicio | Imagen | Responsabilidad |
+|---|---|---|
+| `db` | `postgres:16` (versión fijada) | Base de datos con el volumen con nombre `pgdata`, para que cartera y caché de precios sobrevivan a los reinicios; comprobación de salud con `pg_isready` |
+| `migrate` | la de `api` | `alembic upgrade head` una sola vez, cuando `db` responde |
+| `api` | multi-etapa `python:3.12-slim` + uv (`uv sync --frozen --no-dev`), usuario sin privilegios, TA-Lib desde sus wheels | FastAPI; arranca solo cuando `migrate` ha terminado bien |
+| `web` | multi-etapa Node (build de Vite) → `nginxinc/nginx-unprivileged` | Sirve la SPA y redirige `/api` a `api` |
+
+- **Mismo origen:** nginx sirve la SPA y redirige `/api`, así que no hace falta CORS; en desarrollo, el proxy de Vite hace lo mismo.
+- **Puertos publicados solo en `127.0.0.1`** (`127.0.0.1:8080:8080`): nadie de la misma red puede sustituir la cartera.
+- **Modos de ejecución:** `compose.yaml` es el modo demo (build de producción); `compose.override.yaml`, que Docker Compose carga automáticamente, es el modo desarrollo (Vite en el 5173, `uvicorn --reload` y el código montado desde el disco). La demo se arranca con `docker compose -f compose.yaml up`.
+- **`.env.example`**, sin secretos: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DATABASE_URL`, `BENCHMARK_TICKER=SPY`, `PROVEEDOR_PRECIOS=yfinance|ficheros` y `LLM_API_KEY=` (vacía, solo para S1).
+
+**CI (GitHub Actions)**, en cada push y pull request a `main`, cancelando las ejecuciones anteriores de la misma rama y con caché de uv y npm:
+| Job | Qué ejecuta |
+|---|---|
+| `openspec` | `openspec validate --changes --strict` y validación de las specs vivas |
+| `backend-calidad` | `uv sync --frozen`, `uv run ruff check`, `uv run mypy`, `uv run lint-imports` (import-linter) |
+| `backend-tests` | `uv run pytest`: unit, contract (proveedor de ficheros y TA-Lib) e integración con Testcontainers |
+| `frontend` | eslint, `tsc`, vitest, build y comprobación de que los tipos generados desde el OpenAPI están al día |
+| `seguridad` | pip-audit (sobre `uv export`), `npm audit --audit-level=high`, gitleaks, bandit |
+| `e2e` | compose con `PROVEEDOR_PRECIOS=ficheros` y Playwright; depende de los tres jobs de código |
+| `release` | solo con etiquetas `v*` y todo lo anterior en verde |
+
+Un fallo de cualquier job bloquea el merge. **Testcontainers**, en lugar de un servicio de Actions, para que los tests de integración se ejecuten igual en local y en CI; **E2E con el proveedor de ficheros** para que no dependa de Yahoo ni falle de forma intermitente.
+
+**Publicación de imágenes:** el job `release` construye `api` y `web` con buildx para `linux/amd64` y `linux/arm64` y las publica en `ghcr.io/<owner>/traide-api` y `ghcr.io/<owner>/traide-web` con la versión y el SHA del commit, usando el `GITHUB_TOKEN` con `packages: write`. Los paquetes son públicos para que quien evalúe los descargue sin iniciar sesión. Cada servicio de `compose.yaml` declara `image:` y `build:`: `pull` usa lo publicado y `up --build` compila en local.
+
+**Arranque paso a paso:**
+1. `git clone …` y `cp .env.example .env`. Para la demo sin conexión, `PROVEEDOR_PRECIOS=ficheros`.
+2. Con imágenes publicadas: `docker compose pull` y `docker compose -f compose.yaml up -d`. Para compilar en local: `docker compose -f compose.yaml up -d --build`. En los dos casos, `db` arranca y espera a responder, `migrate` aplica las migraciones y termina, y después arrancan `api` y `web`.
+3. Opcional: `docker compose exec api python -m app.scripts.seed` carga `cartera-ejemplo.xlsx`.
+4. Abrir `http://localhost:8080` y la documentación de la API en `http://localhost:8080/api/docs`.
+5. Parar con `docker compose down`, que conserva `pgdata`. `down -v` borra también la cartera y la caché de precios.
+
+**Sacrificios:** quien evalúa necesita Docker; las imágenes multiarquitectura alargan el job de release; los paquetes públicos en GHCR exponen las imágenes, que de todos modos no contienen secretos.
 
 
 ### **2.5. Seguridad**
@@ -251,13 +455,13 @@ El vector de ataque principal es la **subida de ficheros**. Controles previstos:
 | Riesgo | Control |
 |---|---|
 | Fichero malicioso disfrazado | Validación de extensión **y** *magic bytes* (ZIP `PK\x03\x04`) y estructura OOXML; un fichero que no es XLSX → `415`. Rechazo de `.xlsm` y de cualquier `vbaProject.bin` *(control de diseño, pendiente de spec)* |
-| Zip bomb / DoS | Límite de tamaño (5 MB → `413`). Límite de tamaño descomprimido y nº de entradas del ZIP, máx. 10 000 filas y timeout de parseo *(control de diseño, pendiente de spec)* |
+| Zip bomb / DoS | Límite de tamaño (5 MB → `413`); nginx admite hasta 6 MB (`client_max_body_size 6m`) para que llegue al frontend el `413` en JSON de la API y no el de nginx en HTML. Límite de tamaño descomprimido y nº de entradas del ZIP, máx. 10 000 filas y timeout de parseo *(control de diseño, pendiente de spec)* |
 | XXE / entidades XML | `defusedxml` instalado (openpyxl lo usa automáticamente) |
 | Fórmulas / CSV injection | Lectura con `data_only=True`; valores que empiezan por `= + - @` se tratan como texto y se escapan en cualquier exportación |
 | Path traversal | Nunca se usa el nombre original para escribir en disco; procesamiento en memoria; se guarda solo el SHA-256 |
 | Validación de datos | Esquema estricto con Pydantic (tipos, cantidad > 0, tickers normalizados a mayúsculas, fechas no futuras, venta ≥ compra, venta completa) → `422`; todo o nada: un error rechaza el fichero sin tocar la cartera existente. Precios > 0 y patrón de ticker `^[A-Z.\-]{1,10}$` *(control de diseño, pendiente de spec)* |
-| Acceso sin autenticación | Cartera única sin identificadores en la API; un despliegue público requiere autenticación (backlog) |
-| Abuso de API | Rate limiting (`slowapi`), CORS restringido al origen del frontend, cabeceras de seguridad (CSP, X-Content-Type-Options) |
+| Acceso sin autenticación | Cartera única sin identificadores en la API; solo ejecución local con los puertos publicados en `127.0.0.1`, para que nadie de la misma red pueda sustituir la cartera; un despliegue público requiere autenticación (backlog) |
+| Abuso de API | Rate limiting (`slowapi`); mismo origen vía nginx (la SPA y `/api` se sirven desde `localhost:8080`), así que CORS no hace falta y se mantiene restringido solo como defensa en profundidad; cabeceras de seguridad en nginx (CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy`) |
 | Secretos | Ninguno en el repo; `.env.example` con variables vacías; `gitleaks` en pre-commit y CI |
 | Dependencias | Dependabot + `pip-audit` + `npm audit`; SAST con Bandit/Semgrep |
 | Prompt injection (S1) | Los campos del XLSX nunca se envían como instrucciones al LLM; salida JSON validada contra esquema; el LLM no decide qué operaciones se recomiendan |
@@ -275,11 +479,18 @@ Estrategia planificada (no requerida en la Entrega 1; se implementa en Entregas 
   - ST/LT: venta en el aniversario de la compra → Short-Term; al día siguiente → Long-Term (incluye años bisiestos).
   - Rendimiento: ganancia no realizada en abiertas y pérdida realizada en cerradas.
   - TWR: sesiones de compra, sin flujos y de venta; neutralidad frente a aportaciones (10 + 10 acciones → 21 %); no se anualiza un periodo < 365 días; semanas/meses parciales y sin inversión.
-  - Indicadores: RSI de Wilder, SMA y ATR de Wilder contra valores de referencia de una serie fija; intensidad de las señales (incluido el límite de 100).
+  - Indicadores: intensidad de las señales (incluido el límite de 100); histórico mínimo: RSI(14) con 100 sesiones → "Sin datos suficientes" y con 114 → señal calculada; RSI(21) con 115 → "Sin datos suficientes"; `cruce-medias` 50/200 con 200 sesiones → señal calculada.
+  - Reloj fijo (puerto `Reloj`): los escenarios con fechas concretas ("compra hace 200 días", fechas futuras, aviso fiscal) se ejecutan con una fecha fija.
+  - Datos de mercado: reconstrucción del cierre sin ajustar con un split conocido (10:1 el 2024-06-10: cierre ajustado 120,00 el 2024-06-07 → 1.200,00 sin ajustar); descarte de la barra del día en curso antes de las 16:15 ET.
+  - Precisión: las rentabilidades se comparan con una tolerancia de 1e-9 y los importes (`Decimal`) de forma exacta.
   - Backtest: reparto del capital, ejecución a la apertura de la sesión siguiente (anti *look-ahead*), calentamiento del indicador, máximo drawdown y factor de beneficio con casos calculados a mano.
-  - Recomendaciones: máximo 10, empate por ticker alfabético, stop-loss/objetivo por ATR y aviso fiscal a ≤ 30 días de Long-Term.
-- **Integración:** API + PostgreSQL (Testcontainers o servicio CI) — subir XLSX de fixture → persistencia → `GET /api/cartera/posiciones`; segunda importación sustituye a la primera; códigos `409`/`422`/`503`. Proveedor de precios sustituido por *fake*.
-- **E2E (Playwright):** subir cartera de ejemplo → ver Watchlist → ver TWR → elegir estrategia y ver señales → ejecutar backtest → ver operaciones recomendadas.
+  - Recomendaciones: máximo 10, empate por ticker alfabético, stop-loss/objetivo por ATR y aviso fiscal a ≤ 30 días de Long-Term; una Compra de `cruce-medias` 20/100 con 105 sesiones (menos de las 114 del ATR(14)) no se recomienda y una Venta con menos de 114 sesiones sí.
+- **Arquitectura:** contrato de import-linter en CI (el dominio no importa adaptadores, TA-Lib ni infraestructura).
+- **Contrato (`tests/contract/`):**
+  - Proveedor de precios: la misma batería contra el proveedor de ficheros siempre y contra yfinance solo si se activa expresamente, fuera del CI normal.
+  - TA-Lib: RSI(14) y ATR(14) contra los valores de referencia publicados por StockCharts ChartSchool con tolerancia de 1e-6, más una implementación mínima de Wilder **solo en los tests** como oráculo independiente.
+- **Integración:** API + PostgreSQL con Testcontainers (igual en local y en CI) y el proveedor de ficheros — subir XLSX de fixture → persistencia → `GET /api/cartera/posiciones`; segunda importación sustituye a la primera; códigos `409`/`422`/`503`; con el proveedor caído, `200` si la caché cubre el rango (aunque esté desactualizada) y `503` con `Retry-After` si no lo cubre.
+- **E2E (Playwright), con `PROVEEDOR_PRECIOS=ficheros`:** subir cartera de ejemplo → ver Watchlist → ver TWR → elegir estrategia y ver señales → ejecutar backtest → ver operaciones recomendadas.
 - **Seguridad:** fixtures maliciosos (zip bomb, `.xlsm`, XXE, inyección de fórmulas, fichero no-ZIP renombrado) → respuesta 4xx controlada.
 - **LLM (S1, si se implementa):** respuestas simuladas para tests deterministas; validación de estructura/campos obligatorios en salidas reales.
 
@@ -294,10 +505,13 @@ Estrategia planificada (no requerida en la Entrega 1; se implementa en Entregas 
 | Cálculo | pandas · numpy · `Decimal` | Series temporales diarias, agregación por semana ISO y mes; precisión en importes |
 | Ingesta | openpyxl + defusedxml | Lectura XLSX sin macros ni fórmulas; protección XXE |
 | Persistencia | PostgreSQL 16 · SQLAlchemy 2 · Alembic | `NUMERIC` exacto, migraciones versionadas |
-| Datos de mercado | yfinance (adaptador intercambiable: Stooq / Alpha Vantage) | Gratuito para MVP; abstraído tras `PriceProvider` |
-| Tests | pytest · Testcontainers · Vitest · Playwright | Unit, integración (API + BD) y E2E |
-| Calidad y seguridad | ruff · mypy · eslint · Bandit · pip-audit · npm audit · gitleaks | SAST, dependencias y secretos en CI |
-| Infra | Docker Compose · GitHub Actions | Ejecución local reproducible y CI |
+| Datos de mercado | yfinance (`auto_adjust=False`) + proveedor de ficheros (tests y demo sin conexión) | Gratuito, histórico completo, varios tickers por petición y eventos de split; detrás del puerto `ProveedorPrecios`, sin respaldo automático en otro proveedor (Stooq y Alpha Vantage descartados, sección 2.2) |
+| Indicadores | TA-Lib ≥ 0.6.5 detrás del puerto `IndicadoresTecnicos` | El catálogo crecerá; más de 150 indicadores estándar, mantenimiento activo y wheels con la librería C incluida (sin compilador en Docker) |
+| Dependencias del backend | uv (`uv sync --frozen` en Docker y CI) | Versiones exactas de pandas, numpy y TA-Lib: resultados numéricos reproducibles |
+| Contrato frontend-backend | openapi-typescript | Tipos TypeScript generados desde el OpenAPI; CI comprueba que están al día |
+| Tests | pytest · Testcontainers · Vitest · Playwright | Unit, contrato, integración (API + BD) y E2E |
+| Calidad y seguridad | ruff · mypy · import-linter · eslint (`import/no-restricted-paths`) · Bandit · pip-audit · npm audit · gitleaks | Fronteras de módulos, SAST, dependencias y secretos en CI |
+| Infra | Docker Compose · GitHub Actions · GHCR | Ejecución local reproducible, CI e imágenes publicadas al etiquetar una versión |
 | Especificación e IA | OpenSpec (`/opsx:*`) · Claude / Claude Code | Spec-Driven Development; detalle en `prompts.md` |
 
 
@@ -337,13 +551,22 @@ erDiagram
     PRECIO_DIARIO {
         varchar ticker PK
         date fecha PK
-        numeric apertura "NOT NULL"
-        numeric maximo "NOT NULL"
-        numeric minimo "NOT NULL"
-        numeric cierre "NOT NULL"
+        numeric apertura "NOT NULL; ajustado por splits"
+        numeric maximo "NOT NULL; ajustado por splits"
+        numeric minimo "NOT NULL; ajustado por splits"
+        numeric cierre "NOT NULL; ajustado por splits"
+        numeric cierre_sin_ajustar "NOT NULL; CHECK > 0"
         varchar fuente "NOT NULL"
         timestamptz obtenido_en "NOT NULL"
     }
+    COBERTURA_PRECIO {
+        varchar ticker PK
+        date desde "NOT NULL"
+        date hasta "NOT NULL; CHECK hasta >= desde"
+        timestamptz actualizado_en "NOT NULL"
+        date ultimo_split "NULL si no hay splits"
+    }
+    COBERTURA_PRECIO ||--o{ PRECIO_DIARIO : "cubre el rango de"
 ```
 
 
@@ -356,9 +579,10 @@ erDiagram
 |---|---|---|
 | `IMPORTACION` | Cada carga válida del XLSX; solo una es la cartera vigente | PK `id` (UUIDv4); índice único parcial sobre `vigente WHERE vigente` para garantizar una única cartera; índice en `fichero_sha256` |
 | `POSICION` | Una fila del fichero: posición abierta (sin venta) o cerrada (con fecha y precio de venta) | FK `importacion_id` con `ON DELETE CASCADE`; CHECK `cantidad > 0`, `precio_compra > 0`, `precio_venta > 0`; CHECK `(fecha_venta IS NULL) = (precio_venta IS NULL)` (venta completa); CHECK `fecha_venta >= fecha_compra`; índice (`importacion_id`, `ticker`) |
-| `PRECIO_DIARIO` | Caché OHLC diaria del proveedor de mercado | PK compuesta (`ticker`, `fecha`); la apertura se usa para ejecutar el backtest, máximo/mínimo/cierre para el ATR y el cierre para la valoración y los indicadores |
+| `PRECIO_DIARIO` | Caché OHLC diaria del proveedor de mercado, con dos series: el OHLC ajustado por splits y el cierre sin ajustar | PK compuesta (`ticker`, `fecha`); CHECK `cierre_sin_ajustar > 0`; se escribe con upsert. La apertura ajustada se usa para ejecutar el backtest, máximo/mínimo/cierre ajustados para el ATR y los indicadores, y `cierre_sin_ajustar` para la valoración (Watchlist, rendimiento, TWR) |
+| `COBERTURA_PRECIO` | Rango de fechas ya pedido al proveedor por ticker, cuándo se actualizó y el último split conocido | PK `ticker`; CHECK `hasta >= desde`. Se relaciona con `PRECIO_DIARIO` por `ticker`, sin FK, porque los precios se escriben con upsert por lotes. Hace falta porque las filas de `PRECIO_DIARIO` no bastan: fines de semana, festivos o una salida a bolsa reciente dejan huecos que no significan "falta descargar" |
 
-**Datos derivados (no persistidos):** el estado (abierta/cerrada), el precio de referencia, el rendimiento, los días de tenencia y la plusvalía ST/LT se calculan al consultar las posiciones. La TWR, las señales, los backtests y las recomendaciones también se calculan bajo demanda. El catálogo de estrategias (`rsi`, `cruce-medias`) y sus rangos de parámetros se definen en código. La última cotización de las posiciones abiertas se obtiene del proveedor con su fecha y hora.
+**Datos derivados (no persistidos):** el estado (abierta/cerrada), el precio de referencia, el rendimiento, los días de tenencia y la plusvalía ST/LT se calculan al consultar las posiciones. La TWR, las señales, los backtests y las recomendaciones también se calculan bajo demanda. El catálogo de estrategias (`rsi`, `cruce-medias`) y sus rangos de parámetros se definen en código. El precio de referencia de las posiciones abiertas es el último cierre diario sin ajustar, con su fecha, tomado de la caché `PRECIO_DIARIO`; no se piden cotizaciones intradía.
 
 **La sustitución de la cartera** se hace en una única transacción de BD: se inserta la nueva `IMPORTACION` con sus posiciones, se marca como vigente y se desmarca la anterior. Si el fichero tiene cualquier error, no se escribe nada.
 
@@ -381,6 +605,9 @@ Cabeceras sin importar orden ni mayúsculas; importes en USD.
 - TWR anualizada: `(1 + TWR)^(365 / D) − 1`, solo si `D ≥ 365` días.
 - Intensidad `rsi`: `(sobreventa − RSI) ÷ sobreventa × 100` (Compra), `(RSI − sobrecompra) ÷ (100 − sobrecompra) × 100` (Venta). Intensidad `cruce-medias`: `min(100, |SMA_corta − SMA_larga| ÷ SMA_larga × 1000)`.
 - Compras recomendadas: stop-loss `precio − 2 × ATR(14)`, objetivo `precio + 3 × ATR(14)`.
+- Histórico mínimo de los indicadores: el periodo en las SMA y `periodo + 100` sesiones en el RSI y el ATR de Wilder (114 para RSI(14) y ATR(14)).
+- Cierre sin ajustar: `cierre_sin_ajustar = cierre × F(fecha)`, donde `F(fecha)` es el producto de las proporciones de los splits posteriores a esa fecha. Ejemplo: split 10:1 el 2024-06-10; el cierre ajustado del 2024-06-07 es 120,00, luego el sin ajustar es 1.200,00. Después del último split las dos series coinciden.
+- Serie que usa cada feature: **cierre sin ajustar** en la Watchlist, el rendimiento y la TWR (F1, F2); **OHLC ajustado por splits** en los indicadores y las señales (F3), el backtest (F4) y el ATR de las recomendaciones (F5).
 
 
 
@@ -405,7 +632,7 @@ Endpoints del MVP (base `/api`, cartera única sin identificador):
 
 Códigos comunes:
 - **`409 Conflict`** si no hay cartera importada, en `GET /cartera/rentabilidad/twr`, `GET /estrategias/{id}/senales`, `POST /backtests` y `GET /recomendaciones`. Sin cartera, `GET /cartera/posiciones` responde `200` con una lista vacía, y `GET /estrategias` (catálogo) no depende de la cartera.
-- **`503 Service Unavailable`** si no se pueden obtener precios del proveedor de mercado, en esos mismos cuatro endpoints. `GET /cartera/posiciones` no responde `503`: degrada por posición y devuelve cada posición abierta sin cotización con precio de referencia y rendimiento vacíos y el motivo, y el resto con normalidad. `GET /estrategias` no usa el proveedor.
+- **`503 Service Unavailable`** si no se pueden obtener precios del proveedor de mercado y la caché no cubre el rango que necesita la petición, en esos mismos cuatro endpoints y en el histórico de señales (ver "Proveedor de mercado no disponible"). `GET /cartera/posiciones` no responde `503`: degrada por posición y devuelve cada posición abierta sin cotización con precio de referencia y rendimiento vacíos y el motivo, y el resto con normalidad. `GET /estrategias` no usa el proveedor.
 - **`404 Not Found`** si la estrategia no existe, en señales, backtest y recomendaciones.
 - **`400 Bad Request`** si los parámetros de la estrategia están fuera de rango o son incoherentes.
 
@@ -414,6 +641,20 @@ Códigos específicos de un endpoint:
 - `GET /cartera/rentabilidad/twr`: `422` si el proveedor no tiene ningún precio histórico para algún ticker de la cartera, indicando los tickers sin histórico.
 - `GET /estrategias/{id}/senales/{ticker}/historico`: `404` si el ticker no tiene posición abierta en la cartera.
 - `GET /recomendaciones`: `400` si no se indica la estrategia.
+
+Las excepciones de dominio se traducen a HTTP en un único manejador: `CarteraNoImportada` → `409`, `ProveedorNoDisponible` → `503`, `TickersSinHistorico` → `422`, `EstrategiaInexistente` y `TickerFueraDeCartera` → `404`, `ParametrosNoValidos` → `400`. Los errores de subida (`413`, `415`, `422`) los genera la validación de la importación.
+
+**Proveedor de mercado no disponible.** Se usa la caché aunque esté desactualizada, y solo se responde `503` cuando la caché no cubre el rango que necesita la petición. Las respuestas incluyen la fecha de la sesión usada.
+
+| Endpoint | Proveedor caído, caché suficiente | Proveedor caído, caché insuficiente |
+|---|---|---|
+| `POST /cartera/importacion` | No usa el proveedor | No usa el proveedor |
+| `GET /cartera/posiciones` | `200` con el último cierre en caché | `200`; las posiciones afectadas van sin precio y con su motivo |
+| `GET /estrategias` | `200` | `200` |
+| TWR, señales, histórico, backtest y recomendaciones | `200` con la fecha de la sesión usada | `503` |
+
+- **`422` frente a `503`:** `422` significa que el proveedor respondió y el ticker no tiene histórico; `503`, que no se pudo contactar con el proveedor.
+- **Cuerpo del `503`:** `application/problem+json` con tipo, título y detalle, sin datos internos del proveedor, y cabecera `Retry-After: 60`, que el frontend usa para el botón de reintentar.
 
 Detalle OpenAPI de los 3 principales:
 
