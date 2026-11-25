@@ -113,7 +113,7 @@ Al terminar, dime que features necesitan mas informacion y entrevistame para cua
 **Modelo:** Opus 5.5 xHigh
 **Herramienta:** Claude Code
 A partir de las specs, diseña el modelo de datos mínimo en PostgreSQL y separa lo que se persiste de lo que se calcula bajo demanda. Dibuja un `erDiagram` de Mermaid con PK, FK, NOT NULL, CHECK e índices, garantizando una única cartera vigente. Documenta el formato del fichero XLSX de entrada y las fórmulas clave del dominio: rendimiento, clasificación ST/LT, rentabilidad diaria con aportaciones y retiradas, TWR anualizada según GIPS, intensidad de las señales y stop-loss/objetivo por ATR.
-Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda del modelo de datos si no puedes definir claramente el requisito.
+Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda del modelo de datos si no puedes definir claramente la spec.
 
 **Prompt 2:**
 **Modelo:** Opus 5.5 xHigh
@@ -127,7 +127,7 @@ Revisa el modelo de datos: tipos `NUMERIC` frente a `float` para importes, susti
 **Prompt 1:**
 **Modelo:** Opus 5.5 xHigh
 **Herramienta:** Claude Code
-Lista los endpoints REST del MVP (base `/api`, cartera única sin identificador) asociados a cada feature y documenta en OpenAPI 3.0.3 los 3 principales: importación del XLSX, TWR y backtest. Los códigos de error comunes (400, 404, 409, 413, 415, 422, 503) deben ser coherentes con los escenarios de las specs.
+Lista los endpoints REST del MVP (base `/api`, cartera única sin identificador) asociados a cada feature y documenta en OpenAPI 3.0.3 los 3 principales: importación del XLSX, TWR y backtest. Los códigos de error comunes (400, 403, 404, 409, 413, 415, 422, 429, 500, 503) deben ser coherentes con los escenarios de las specs.
 Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda de la API si no puedes definir claramente el requisito.
 
 ---
