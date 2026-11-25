@@ -36,7 +36,7 @@ Ticket OPS-01 (Entrega 2), transversal a HU-1..HU-5. O1-O7 remiten a design.md. 
 
 - [x] 5.1 Crear `.github/workflows/ci.yml` con los jobs `openspec`, `backend-calidad`, `backend-tests`, `frontend` y `seguridad` de O6: push y pull request a `main`, `concurrency` con cancelación, caché de uv y npm, `permissions: contents: read` y acciones fijadas por SHA. Verificar ejecutando en local los mismos comandos de cada job, todos en verde.
 - [x] 5.2 Crear `.github/dependabot.yml` para `github-actions`, `pip` (en `backend/`) y `npm` (en `frontend/`), semanal. Verificar que el YAML es válido.
-- [ ] 5.3 Subir la rama y comprobar que el workflow se ejecuta en GitHub con los cinco jobs en verde. Verificar con `gh run list --branch feature/entrega-2-sg` y `gh run view`.
+- [x] 5.3 Subir la rama y comprobar que el workflow se ejecuta en GitHub con los cinco jobs en verde. Verificar con `gh run list --branch feature/entrega-2-sg` y `gh run view`.
 
 ## 6. Documentación (HU-1..HU-5)
 
