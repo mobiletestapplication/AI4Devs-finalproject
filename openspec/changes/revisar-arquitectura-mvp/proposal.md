@@ -51,5 +51,5 @@ _Ninguna._
 - **Dependencias:** TA-Lib ≥ 0.6.5 en la imagen de la API.
 - **Modelo de datos:** `PRECIO_DIARIO` gana `cierre_sin_ajustar`. El resto del OHLC almacenado es el ajustado por splits.
 - **Adaptador de precios:** debe obtener también los eventos de split para reconstruir el cierre sin ajustar.
-- **readme.md:** secciones 0.4, 1.2 (F1, F3, F5), 2.1, 2.2, 2.4, 2.6, 2.7, 3.1, 3.2 y 6 (DB-01, BE-02).
+- **readme.md:** secciones 0.4, 1.2 (F1, F3, F5), 1.4, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 3.1, 3.2 y 6 (DB-01, BE-01, BE-02, FE-01, OPS-01).
 - **Orden:** aplicar después de `alinear-readme-con-specs`, que edita algunas de las mismas secciones. Su divergencia D1 (códigos `409`/`503` comunes) es coherente con el mapeo de errores de este change.

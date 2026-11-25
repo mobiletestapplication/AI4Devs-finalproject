@@ -143,7 +143,7 @@ Las consultas de posiciones no lanzan `ProveedorNoDisponible`: devuelven cada po
 - **Alternativa descartada:** `Decimal` en todas las series. pandas no vectoriza con `Decimal` y los cálculos serían órdenes de magnitud más lentos sin ganar precisión significativa en ratios.
 
 ### A9. Despliegue solo local
-`docker compose` con los servicios `db`, `api` y `web`. CI (GitHub Actions) ejecuta lint, tests y auditorías, sin fase de despliegue.
+`docker compose` con los servicios `db`, `migrate`, `api` y `web`. CI (GitHub Actions) ejecuta lint, tests y auditorías y publica imágenes en GHCR al etiquetar una versión, pero no despliega en ningún entorno público. El detalle está en A14.
 - **Alternativa descartada:** PaaS público. Sin autenticación, cualquier visitante podría sustituir la cartera única.
 
 ### A10. Proveedor de precios
@@ -311,6 +311,88 @@ Precedencia: las specs prevalecen sobre `design.md` y este sobre el readme. El a
 | 6. Tickets | `tasks.md` | Tareas, criterios de aceptación y backlog | apply |
 | 7. Pull requests | — (un PR por change, si se usan) | Enlace y resumen | merge |
 
+### A14. Infraestructura, CI y publicación de imágenes
+Amplía A9: la aplicación se ejecuta solo en local. El despliegue en un PaaS queda como evolución futura, que exige añadir antes la autenticación.
+
+**Servicios de `compose.yaml`:**
+| Servicio | Imagen | Responsabilidad |
+|---|---|---|
+| `db` | `postgres:16` (versión fijada) | Base de datos con el volumen con nombre `pgdata`, para que cartera y caché de precios sobrevivan a los reinicios; comprobación de salud con `pg_isready` |
+| `migrate` | la de `api` | `alembic upgrade head` una sola vez, cuando `db` responde |
+| `api` | multi-etapa `python:3.12-slim` + uv (`uv sync --frozen --no-dev`), usuario sin privilegios, TA-Lib desde sus wheels | FastAPI; arranca solo cuando `migrate` ha terminado bien |
+| `web` | multi-etapa Node (build de Vite) → `nginxinc/nginx-unprivileged` | Sirve la SPA y redirige `/api` a `api` |
+
+- **Mismo origen:** nginx sirve la SPA y redirige `/api`, así que no hace falta CORS. Se mantiene restringido solo como defensa en profundidad. En desarrollo, el proxy de Vite hace lo mismo.
+- **Límite de subida:** `client_max_body_size 6m` en nginx, para que el `413` en JSON de la API (más de 5 MB, importacion-cartera) llegue al frontend en lugar del 413 en HTML de nginx.
+- **Cabeceras de seguridad** en nginx: CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy`.
+- **Puertos publicados solo en `127.0.0.1`** (`127.0.0.1:8080:8080`): sin autenticación, nadie de la misma red puede sustituir la cartera.
+- **Modos de ejecución:**
+  - `compose.yaml` es el modo demo (build de producción);
+  - `compose.override.yaml`, que Docker Compose carga automáticamente, es el modo desarrollo: Vite en el 5173, `uvicorn --reload` y el código montado desde el disco;
+  - la demo se arranca con `docker compose -f compose.yaml up`.
+- **`.env.example`**, sin secretos:
+  - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` y `DATABASE_URL`;
+  - `BENCHMARK_TICKER=SPY`;
+  - `PROVEEDOR_PRECIOS=yfinance|ficheros` (A10);
+  - `LLM_API_KEY=` (vacía, solo para S1).
+
+**CI (GitHub Actions)**, en cada push y pull request a `main`, cancelando las ejecuciones anteriores de la misma rama y con caché de uv y npm:
+| Job | Qué ejecuta |
+|---|---|
+| `openspec` | `openspec validate --changes --strict` y validación de las specs vivas |
+| `backend-calidad` | ruff, mypy, import-linter |
+| `backend-tests` | pytest unit, contract (proveedor de ficheros y TA-Lib) e integración con Testcontainers |
+| `frontend` | eslint, `tsc`, vitest, build y comprobación de que los tipos generados desde el OpenAPI están al día |
+| `seguridad` | pip-audit (sobre `uv export`), `npm audit --audit-level=high`, gitleaks, bandit |
+| `e2e` | compose con `PROVEEDOR_PRECIOS=ficheros` y Playwright; depende de los tres jobs de código |
+| `release` | solo con etiquetas `v*` y todo lo anterior en verde (ver abajo) |
+
+Un fallo de cualquier job bloquea el merge. **Testcontainers** en lugar de un servicio de Actions, para que los tests de integración se ejecuten igual en local y en CI. **E2E con el proveedor de ficheros** para que no dependa de Yahoo ni falle de forma intermitente.
+
+**Publicación de imágenes:**
+- El job `release` construye `api` y `web` con buildx para `linux/amd64` y `linux/arm64`, y las publica en `ghcr.io/<owner>/traide-api` y `ghcr.io/<owner>/traide-web` con la versión y el SHA del commit.
+- Usa el `GITHUB_TOKEN` con `packages: write`, sin secretos adicionales. Los paquetes son públicos para que quien evalúe los descargue sin iniciar sesión.
+- Cada servicio de `compose.yaml` declara `image:` y `build:`: `pull` usa lo publicado y `up --build` compila en local.
+
+```mermaid
+flowchart LR
+    subgraph Local [Máquina local · docker compose · puertos en 127.0.0.1]
+        B[Navegador] -->|:8080| WEB[web<br/>nginx-unprivileged<br/>SPA + proxy /api<br/>client_max_body_size 6m · CSP]
+        WEB -->|/api| API[api<br/>python:3.12-slim + uv<br/>FastAPI · TA-Lib · sin privilegios]
+        MIG[migrate<br/>alembic upgrade head] -->|completado| API
+        API --> DB[(db<br/>postgres:16<br/>volumen pgdata)]
+        MIG --> DB
+        API -->|PROVEEDOR_PRECIOS=yfinance| YF[Yahoo Finance]
+        API -.->|PROVEEDOR_PRECIOS=ficheros| CSV[app/recursos/precios-demo]
+    end
+
+    subgraph CI [GitHub Actions]
+        J0[openspec] & J1[backend-calidad] & J2[backend-tests] & J3[frontend] & J4[seguridad]
+        J1 & J2 & J3 --> J5[e2e]
+        J0 & J4 & J5 -->|etiqueta v*| REL[release<br/>buildx amd64 + arm64]
+    end
+
+    REL --> GHCR[(ghcr.io<br/>traide-api · traide-web)]
+    GHCR -->|docker compose pull| Local
+```
+
+**Arranque paso a paso:**
+1. `git clone …` y `cp .env.example .env`. Para la demo sin conexión, `PROVEEDOR_PRECIOS=ficheros`.
+2. Con imágenes publicadas: `docker compose pull` y `docker compose -f compose.yaml up -d`. Para compilar en local: `docker compose -f compose.yaml up -d --build`. En los dos casos, `db` arranca y espera a responder, `migrate` aplica las migraciones y termina, y después arrancan `api` y `web`.
+3. Opcional: `docker compose exec api python -m app.scripts.seed` carga `cartera-ejemplo.xlsx`.
+4. Abrir `http://localhost:8080` y la documentación de la API en `http://localhost:8080/api/docs`.
+5. Parar con `docker compose down`, que conserva `pgdata`. `down -v` borra también la cartera y la caché de precios.
+
+**Alternativas descartadas:**
+- PaaS con autenticación básica: añade secretos, un job de despliegue y los límites del plan gratuito, sin requisito que lo pida.
+- Migraciones al arrancar la API: mezcla responsabilidades y, si hubiera varias réplicas, competirían por migrar.
+- Servicio de PostgreSQL de Actions: no coincide con el entorno local de los tests.
+
+**Sacrificios:**
+- Quien evalúa necesita Docker.
+- Las imágenes multiarquitectura alargan el job de release.
+- Los paquetes públicos en GHCR exponen las imágenes, que de todos modos no contienen secretos.
+
 ### Componentes principales
 | Componente | Tecnología | Responsabilidad |
 |---|---|---|
@@ -364,6 +446,7 @@ erDiagram
 
 - [El proveedor no devuelve eventos de split o los corrige más tarde] → invalidación por `ultimo_split` (A5), que vuelve a descargar y normalizar todo el histórico del ticker; test de contrato con un ticker con splits conocidos.
 - [TA-Lib cambia ligeramente los resultados entre versiones] → versión fijada en el lock de dependencias y tests de contrato con valores de referencia.
+- [El límite de subida de nginx y el de la API divergen] → test E2E que sube un fichero de 5,5 MB y espera el `413` en JSON de la API.
 - [Yahoo bloquea las peticiones durante la grabación de la demo] → proveedor de ficheros (A10) y caché ya poblada.
 - [yfinance es una librería no oficial y puede romperse o limitar peticiones] → puerto `ProveedorPrecios`, caché persistente y `503` explícito.
 - [import-linter solo protege si se ejecuta] → forma parte del job de lint de CI y bloquea el merge.

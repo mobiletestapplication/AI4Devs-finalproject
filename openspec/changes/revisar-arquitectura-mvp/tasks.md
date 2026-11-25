@@ -25,12 +25,16 @@ Entrega 1: todas las tareas editan solo `readme.md`; no se escribe código. Apli
 
 ## 3. Tests (HU-1 a HU-5)
 
-- [ ] 3.1 Añadir a la sección 2.6 los tests con reloj fijo, la reconstrucción del cierre sin ajustar con un split conocido, la tolerancia de 1e-9 en rentabilidades frente a importes exactos, el contrato de import-linter, los tests de contrato del proveedor (de ficheros siempre; yfinance solo si se activa), el descarte de la barra del día en curso la respuesta con caché desactualizada frente a `503`, los tests de contrato de TA-Lib contra valores de referencia de StockCharts y el oráculo de Wilder solo de tests, y los escenarios de histórico mínimo (100 → "Sin datos suficientes", 114 → señal) y de compra sin ATR. Verificar que cada test cita la decisión de design.md que cubre.
+- [ ] 3.1 Añadir a la sección 2.6 los tests con reloj fijo, la reconstrucción del cierre sin ajustar con un split conocido, la tolerancia de 1e-9 en rentabilidades frente a importes exactos, el contrato de import-linter, los tests de contrato del proveedor (de ficheros siempre; yfinance solo si se activa), el descarte de la barra del día en curso, la respuesta con caché desactualizada frente a `503`, los tests de contrato de TA-Lib contra valores de referencia de StockCharts y el oráculo de Wilder solo de tests, y los escenarios de histórico mínimo (100 → "Sin datos suficientes", 114 → señal) y de compra sin ATR. Verificar que cada test cita la decisión de design.md que cubre.
 
 ## 4. DevOps (HU-1 a HU-5)
 
 - [ ] 4.1 Eliminar de las secciones 0.4 y 2.4 el despliegue opcional en PaaS, dejar solo `docker compose` local y CI sin despliegue (A9), y añadir import-linter al stack de la sección 2.7. Verificar con `grep -n -i "render\|railway\|fly.io\|paas" readme.md` que no quedan referencias.
 - [ ] 4.2 Añadir a la sección 2.7 uv (`uv sync --frozen` en Docker y CI), ESLint con `import/no-restricted-paths` y openapi-typescript, y a la sección 2.4 los comandos de CI con uv. Verificar que coinciden con A13.
+- [ ] 4.3 Reescribir la sección 2.4 con A14: tabla de servicios (`db`, `migrate`, `api`, `web`), modos demo y desarrollo, puertos en `127.0.0.1`, `.env.example`, jobs de CI, publicación en GHCR, el diagrama Mermaid y el arranque paso a paso. Verificar que el diagrama se renderiza y que cada job de la tabla aparece en él.
+- [ ] 4.4 Actualizar las secciones 0.4 y 1.4 con el arranque paso a paso de A14, sustituyendo `localhost:5173` y `localhost:8000/docs` por `localhost:8080` y `localhost:8080/api/docs`, e indicando las dos vías (imágenes publicadas o `--build`). Verificar con `grep -n "5173\|8000" readme.md` que solo queda el 5173 en la descripción del modo desarrollo.
+- [ ] 4.5 Actualizar la sección 2.5: el mismo origen vía nginx (CORS solo como defensa en profundidad), `client_max_body_size 6m` frente al límite de 5 MB de la API y los puertos publicados solo en `127.0.0.1`. Verificar que la fila "Zip bomb / DoS" sigue citando `413` para más de 5 MB.
+- [ ] 4.6 Fijar en la sección 2.6 Testcontainers para los tests de integración (eliminar "o servicio CI") y el E2E con `PROVEEDOR_PRECIOS=ficheros`, y ampliar OPS-01 en la sección 6 con compose, `migrate`, CI y el job de release. Verificar que OPS-01 referencia A14.
 
 ## 5. Comprobación final
 
