@@ -16,8 +16,11 @@ Cubre la feature **F1 (Importación y Watchlist)** y la historia **HU-1**.
 - **Cartera vigente exactamente única:** nueva tabla de una sola fila, `CARTERA_VIGENTE`, que apunta a la importación vigente. Sustituye al índice único parcial sobre `IMPORTACION.vigente`. La importación anterior se borra en la misma transacción.
 - **Restricciones nuevas:**
   - **`POSICION`:** `UNIQUE (importacion_id, fila)`, CHECK del patrón de ticker y de la fila.
-  - **`IMPORTACION`:** CHECK de los recuentos.
-  - **`PRECIO_DIARIO`:** CHECK de precios positivos y de `maximo >= minimo`.
+  - **`IMPORTACION`:** sin recuentos redundantes; se deducen de `POSICION`.
+  - **`PRECIO_DIARIO` y `COBERTURA_PRECIO`:** CHECK de precios positivos, `maximo >= minimo`, patrón de ticker y `fuente`.
+- **Sustitución concurrente segura:** bloqueo de la transacción con `pg_advisory_xact_lock` y borrado de todas las importaciones distintas de la nueva.
+- **`NUMERIC` en toda la cadena:** conversión de los float de openpyxl y del proveedor con `Decimal(repr(...))` y validación de decimales antes de insertar.
+- **Caché atómica:** precios y cobertura en la misma transacción; invalidación por split sin lecturas mezcladas.
 - **Formato del XLSX (spec):**
   - **tipos de celda:** celdas nativas de fecha y número más texto ISO `AAAA-MM-DD` y número con punto decimal;
   - **cantidades fraccionarias:** hasta 6 decimales;
