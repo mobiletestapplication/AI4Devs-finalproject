@@ -9,13 +9,13 @@ Entrega 1: todas las tareas editan solo `readme.md`; no se escribe código. Apli
 - [ ] 1.3 Sustituir "Datos derivados (no persistidos)" de la sección 3.2 por la tabla de M5. Verificar que no queda ningún resultado calculado como persistido.
 - [ ] 1.4 Añadir a la sección 3.2 las decisiones M8 (conversión con `Decimal(repr(...))`, validación de decimales antes de insertar, `asdecimal=True`, redondeo al serializar) y M9 (transacción conjunta de precios y cobertura, invalidación por split atómica, bloqueo por ticker). Verificar que M8 no contradice A8 de `revisar-arquitectura-mvp`.
 - [ ] 1.5 Añadir a la sección 3.2 el bloqueo `pg_advisory_xact_lock` y el borrado de todas las importaciones distintas de la nueva (M1). Verificar que se explica el caso de dos importaciones simultáneas.
-- [ ] 1.6 Actualizar DB-01 en la sección 6: `CARTERA_VIGENTE` en lugar del índice parcial, los CHECK de M3 y los tests de integración que esperan `IntegrityError` (segunda fila en `CARTERA_VIGENTE`, ticker `aapl$` en `POSICION` y en `PRECIO_DIARIO`, fila 1, `maximo < minimo`, `fuente` desconocida, borrado de la importación vigente), un test de concurrencia con dos importaciones simultáneas que deje exactamente una importación, y un test de invalidación por split sin lecturas mezcladas. Verificar que cada CHECK tiene su test.
+- [ ] 1.6 **Consolidada en `revisar-tickets` (K7): no editar la sección 6; verificar que `revisar-tickets` recoge lo que pedía esta tarea.** Actualizar DB-01 en la sección 6: `CARTERA_VIGENTE` en lugar del índice parcial, los CHECK de M3 y los tests de integración que esperan `IntegrityError` (segunda fila en `CARTERA_VIGENTE`, ticker `aapl$` en `POSICION` y en `PRECIO_DIARIO`, fila 1, `maximo < minimo`, `fuente` desconocida, borrado de la importación vigente), un test de concurrencia con dos importaciones simultáneas que deje exactamente una importación, y un test de invalidación por split sin lecturas mezcladas. Verificar que cada CHECK tiene su test.
 
 ## 2. Backend (HU-1)
 
 - [ ] 2.1 Sustituir el apartado "Formato del fichero de entrada" de la sección 3.2 por la tabla de M6. Verificar contra los cinco requisitos del delta (tipos de celda, cantidades fraccionarias, columnas y filas vacías, precisión de los precios, fichero sin filas de datos).
 - [ ] 2.2 Sustituir "Fórmulas clave" de la sección 3.2 por M7. Si `revisar-arquitectura-mvp` y `estrategia-de-tests` ya añadieron fórmulas, conservar sus ejemplos sin duplicarlos. Verificar los ejemplos: 50 USD, Long-Term el 2025-01-11 y el 2025-03-01, 96 y 106.
-- [ ] 2.3 Actualizar la fila "Ingesta XLSX" de la sección 2.2 y la tarea 4 de BE-01 con los tipos de celda, el máximo de 6 decimales, las columnas ignoradas y las filas vacías. Verificar que coinciden con el delta.
+- [ ] 2.3 Actualizar la fila "Ingesta XLSX" de la sección 2.2 y la tarea 4 de BE-01 con los tipos de celda, el máximo de 6 decimales, las columnas ignoradas y las filas vacías. Verificar que coinciden con el delta. En la sección 6 no editar nada: lo consolida `revisar-tickets` (K7).
 
 ## 3. Tests e historia de usuario (HU-1)
 

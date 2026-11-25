@@ -4,7 +4,7 @@ Entrega 1: todas las tareas son de documentación en `readme.md`; no se escribe 
 
 ## 1. Base de datos (HU-1)
 
-- [ ] 1.1 Actualizar el ticket DB-01 de la sección 6 para indicar que el seed usa el mismo `cartera-ejemplo.xlsx` que sirve el endpoint de ejemplo. Verificar que se nombra el fichero y que el modelo de datos de la sección 3 no cambia.
+- [ ] 1.1 **Consolidada en `revisar-tickets` (K7): no editar la sección 6; verificar que `revisar-tickets` recoge lo que pedía esta tarea.** Actualizar el ticket DB-01 de la sección 6 para indicar que el seed usa el mismo `cartera-ejemplo.xlsx` que sirve el endpoint de ejemplo. Verificar que se nombra el fichero y que el modelo de datos de la sección 3 no cambia.
 
 ## 2. Backend (HU-1)
 
@@ -18,7 +18,7 @@ Entrega 1: todas las tareas son de documentación en `readme.md`; no se escribe 
 ## 3. Frontend (HU-1)
 
 - [ ] 3.1 Actualizar el punto 1 (Carga y Watchlist) de la sección 1.3 con la cabecera de resumen, la tabla fiscal desplegable, la fecha de los datos con el aviso de desactualización y el enlace "Descargar cartera de ejemplo". Verificar que cada elemento corresponde a un escenario de pantalla del delta.
-- [ ] 3.2 Añadir a FE-01, en la sección 6, la cabecera de resumen y el enlace de descarga, o crear un ticket FE nuevo en el backlog. Verificar que referencia HU-1.
+- [ ] 3.2 **Consolidada en `revisar-tickets` (K7): no editar la sección 6; verificar que `revisar-tickets` recoge lo que pedía esta tarea.** Añadir a FE-01, en la sección 6, la cabecera de resumen y el enlace de descarga, o crear un ticket FE nuevo en el backlog. Verificar que referencia HU-1.
 
 ## 4. Tests (HU-1)
 

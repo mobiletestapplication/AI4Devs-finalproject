@@ -20,7 +20,7 @@ Entrega 1: todas las tareas son de documentación en `readme.md`; no se escribe 
 ## 4. Historias de usuario y tickets (HU-4)
 
 - [ ] 4.1 Añadir a los criterios de aceptación de HU-4 la ordenación por Sharpe y el aviso de sesgo con el ejemplo de `NVDA`. Verificar que son resúmenes fieles de los escenarios.
-- [ ] 4.2 Ampliar la descripción de BE-05 y FE-04 en el backlog de la sección 6 y revisar sus estimaciones. Verificar que ambos referencian HU-4.
+- [ ] 4.2 **Consolidada en `revisar-tickets` (K7): no editar la sección 6; verificar que `revisar-tickets` recoge lo que pedía esta tarea.** Ampliar la descripción de BE-05 y FE-04 en el backlog de la sección 6 y revisar sus estimaciones. Verificar que ambos referencian HU-4.
 
 ## 5. Comprobación final
 

@@ -28,7 +28,7 @@ Entrega 1: todas las tareas son de documentación en `readme.md`; no se escribe 
 ## 6. Historias de usuario y tickets (HU-2, HU-4)
 
 - [ ] 6.1 Añadir a los criterios de aceptación de HU-2 la comparación con SPY (+11,00 pp), y a los de HU-4 las líneas base y la propuesta "queda 1,00 pp por debajo de comprar y mantener". Verificar que son resúmenes fieles de los escenarios.
-- [ ] 6.2 Ampliar el título o la descripción de BE-03, FE-02, BE-05 y FE-04 en el backlog de la sección 6 y revisar sus estimaciones. Verificar que cada ticket referencia HU-2 o HU-4.
+- [ ] 6.2 **Consolidada en `revisar-tickets` (K7): no editar la sección 6; verificar que `revisar-tickets` recoge lo que pedía esta tarea.** Ampliar el título o la descripción de BE-03, FE-02, BE-05 y FE-04 en el backlog de la sección 6 y revisar sus estimaciones. Verificar que cada ticket referencia HU-2 o HU-4.
 
 ## 7. Comprobación final
 

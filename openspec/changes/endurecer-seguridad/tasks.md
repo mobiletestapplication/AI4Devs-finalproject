@@ -10,8 +10,8 @@ Entrega 1: todas las tareas editan solo `readme.md`; no se escribe código. Apli
 ## 2. Backend (HU-1 a HU-5)
 
 - [ ] 2.1 Añadir a la sección 4 los códigos nuevos: `400` por Host, `403` por origen, `429` con `Retry-After` en la importación y el backtest, `400` para la validación de parámetros y `500` en `application/problem+json`; y ampliar el OpenAPI de `/api/cartera/importacion` con los casos nuevos de `413`, `415` y `422`. Verificar contra los escenarios de `seguridad-api` y del delta de `importacion-cartera`.
-- [ ] 2.2 Actualizar la fila "Ingesta XLSX" de la sección 2.2 y la tarea 4 de BE-01 en la sección 6 con el orden de validación de S2, el patrón de ticker y los precios > 0, ya como requisitos de spec. Verificar que ninguna los presenta como pendientes de spec.
-- [ ] 2.3 Añadir a OPS-01 (sección 6) la configuración de los orígenes y hosts admitidos por entorno y slowapi. Verificar que coincide con S4 y S5.
+- [ ] 2.2 Actualizar la fila "Ingesta XLSX" de la sección 2.2 y la tarea 4 de BE-01 en la sección 6 con el orden de validación de S2, el patrón de ticker y los precios > 0, ya como requisitos de spec. Verificar que ninguna los presenta como pendientes de spec. En la sección 6 no editar nada: lo consolida `revisar-tickets` (K7).
+- [ ] 2.3 **Consolidada en `revisar-tickets` (K7): no editar la sección 6; verificar que `revisar-tickets` recoge lo que pedía esta tarea.** Añadir a OPS-01 (sección 6) la configuración de los orígenes y hosts admitidos por entorno y slowapi. Verificar que coincide con S4 y S5.
 
 ## 3. Tests (HU-1)
 

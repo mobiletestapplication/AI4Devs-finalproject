@@ -19,7 +19,7 @@ Entrega 1: todas las tareas editan solo `readme.md`; no se escribe código. T1-T
 ## 4. DevOps y tickets (HU-1 a HU-5)
 
 - [ ] 4.1 Añadir a la sección 2.4 el paso de trazabilidad dentro del job `backend-calidad`, `FECHA_ACTUAL_FIJA` solo en el compose de E2E y los umbrales de cobertura de T8. Verificar que coincide con A14 de `revisar-arquitectura-mvp` si ya está aplicado.
-- [ ] 4.2 Ampliar QA-01 en la sección 6 con el script de trazabilidad, el generador de fixtures y el recorrido E2E. Verificar que referencia todas las HU.
+- [ ] 4.2 **Consolidada en `revisar-tickets` (K7): no editar la sección 6; verificar que `revisar-tickets` recoge lo que pedía esta tarea.** Ampliar QA-01 en la sección 6 con el script de trazabilidad, el generador de fixtures y el recorrido E2E. Verificar que referencia todas las HU.
 
 ## 5. Comprobación final
 
