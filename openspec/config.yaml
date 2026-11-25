@@ -1,0 +1,58 @@
+schema: spec-driven
+
+# Contexto del proyecto: restricciones que el agente no puede deducir leyendo el código.
+context: |
+  trAIde: dashboard web educativo que importa una cartera de inversión simulada desde un
+  XLSX de posiciones abiertas y cerradas y ofrece Watchlist con ST/LT, TWR, estrategias
+  por indicador, backtesting y hasta 10 operaciones recomendadas.
+
+  Idioma: todos los artefactos se escriben en castellano; solo las palabras clave
+  RFC-2119 (SHALL, MUST, SHOULD, MAY) van en inglés y en mayúsculas.
+
+  Alcance del MVP (no ampliar sin un change explícito):
+  - Una única cartera, sin autenticación; cada importación válida sustituye a la anterior.
+  - Moneda única USD; sin conversión de divisas, dividendos, splits, comisiones,
+    deslizamiento, saldo de efectivo ni posiciones cortas.
+  - Una fila del XLSX = una posición; no hay asignación FIFO de ventas a lotes.
+  - Datos de mercado diarios (OHLC) de un proveedor externo gratuito, cacheados en BD.
+  - Producto educativo: nunca ejecuta órdenes reales y siempre muestra que no constituye
+    asesoramiento financiero.
+
+  Stack previsto: backend Python 3.12 + FastAPI + Pydantic v2, pandas, PostgreSQL 16 con
+  SQLAlchemy 2 y Alembic; frontend React 18 + TypeScript + Vite; Docker Compose y
+  GitHub Actions. Arquitectura: monolito modular con dominio puro sin I/O y adaptadores
+  detrás de interfaces (XLSX, proveedor de precios, BD, LLM opcional).
+
+  Fuente de verdad: las specs vivas de openspec/specs/. El readme.md se deriva de ellas y
+  de los artefactos de los changes; si divergen, prevalecen las specs.
+
+  Entregas: en la Entrega 1 (documentación técnica) no se escribe código; solo specs,
+  artefactos de changes, readme.md y prompts.md.
+
+# Reglas por artefacto
+rules:
+  proposal:
+    - Indica qué feature (F1-F5 o S1-S3) y qué historia de usuario (HU-n) cubre el change.
+    - Incluye siempre una sección de fuera de alcance.
+  specs:
+    - Cada requisito usa "### Requirement:" con SHALL y al menos un "#### Scenario:" con viñetas "- **WHEN**" y "- **THEN**".
+    - Describe solo comportamiento observable desde fuera, sin nombres de clase ni rutas de archivo; en backend, la petición y la respuesta HTTP; en frontend, lo que la persona ve y puede hacer en pantalla.
+    - Los escenarios de cálculo financiero llevan ejemplos numéricos concretos que puedan convertirse en tests.
+  design:
+    - Justifica cada decisión con alternativas descartadas, beneficios y sacrificios.
+    - Usa diagramas Mermaid para arquitectura y modelo de datos (erDiagram con PK, FK y restricciones).
+    - Importes y cantidades en tipos decimales exactos, nunca float.
+    - Incluye las implicaciones de seguridad de la subida de ficheros cuando aplique.
+  tasks:
+    - Agrupa las tareas por tipo (base de datos, backend, frontend, tests, devops) y referencia la HU.
+    - Cada tarea incluye criterios de aceptación verificables.
+    - En la Entrega 1 las tareas son solo de documentación, sin código.
+
+# Indicaciones por operación
+operations:
+  apply:
+    guidance:
+      - Tras completar las tareas, actualiza las secciones del readme.md afectadas según la tabla de trazabilidad de su sección 2.3.
+  archive:
+    guidance:
+      - Antes de archivar, comprueba que el readme.md no contradice las specs actualizadas.
