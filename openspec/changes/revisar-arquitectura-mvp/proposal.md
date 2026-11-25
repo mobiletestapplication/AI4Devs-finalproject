@@ -23,6 +23,7 @@ Cubre transversalmente las features **F1-F5** y las historias de usuario **HU-1 
 - **Servicio de datos de mercado:** rango de descarga con calentamiento, calendario de sesiones derivado de los datos y política de refresco de la última sesión.
 - **Puerto `Reloj`** para la fecha actual y **mapeo centralizado** de las excepciones de dominio a códigos HTTP.
 - **Frontera entre `Decimal` y float:** `Decimal` para importes y cantidades, float64 para series de rentabilidades e indicadores, con redondeo explícito al serializar.
+- **Indicadores con TA-Lib detrás de un puerto** `IndicadoresTecnicos`, porque el catálogo de estrategias crecerá. Las señales, la intensidad y "Sin datos suficientes" siguen siendo lógica propia, con un histórico mínimo de periodo + 100 sesiones para el RSI y el ATR.
 - **Despliegue solo local** con `docker compose`; se retira el despliegue opcional en un PaaS.
 
 ## Capabilities
@@ -32,6 +33,8 @@ _Ninguna._
 
 ### Modified Capabilities
 - `importacion-cartera`: el requisito "Precio de referencia" pasa a definir el último cierre diario disponible, con la fecha de esa sesión, en lugar de una "última cotización" sin precisar.
+- `estrategias-indicador`: nuevo requisito de histórico mínimo (el periodo en las SMA y el periodo + 100 sesiones en el RSI y el ATR).
+- `operaciones-recomendadas`: la selección excluye las Compra sin histórico suficiente para el ATR(14).
 
 ## Fuera de alcance
 
@@ -44,8 +47,9 @@ _Ninguna._
 
 ## Impact
 
-- **Spec:** delta MODIFIED en `importacion-cartera` ("Precio de referencia"). Ningún escenario existente cambia de resultado.
+- **Specs:** MODIFIED en `importacion-cartera` ("Precio de referencia") y en `operaciones-recomendadas` ("Selección de las operaciones recomendadas"), y ADDED en `estrategias-indicador` ("Histórico mínimo de los indicadores"). Ningún escenario existente cambia de resultado.
+- **Dependencias:** TA-Lib ≥ 0.6.5 en la imagen de la API.
 - **Modelo de datos:** `PRECIO_DIARIO` gana `cierre_sin_ajustar`. El resto del OHLC almacenado es el ajustado por splits.
 - **Adaptador de precios:** debe obtener también los eventos de split para reconstruir el cierre sin ajustar.
-- **readme.md:** secciones 0.4, 1.2 (F1), 2.1, 2.2, 2.4, 2.6, 2.7, 3.1, 3.2 y 6 (DB-01, BE-02).
+- **readme.md:** secciones 0.4, 1.2 (F1, F3, F5), 2.1, 2.2, 2.4, 2.6, 2.7, 3.1, 3.2 y 6 (DB-01, BE-02).
 - **Orden:** aplicar después de `alinear-readme-con-specs`, que edita algunas de las mismas secciones. Su divergencia D1 (códigos `409`/`503` comunes) es coherente con el mapeo de errores de este change.

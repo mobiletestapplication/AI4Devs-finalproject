@@ -18,9 +18,12 @@ Entrega 1: todas las tareas editan solo `readme.md`; no se escribe código. Apli
 - [ ] 2.6 Sustituir en las secciones 2.2 y 2.7 "yfinance (adaptador intercambiable: Stooq / Alpha Vantage)" por la decisión A10: yfinance como único proveedor real más un proveedor de ficheros, con la tabla comparativa resumida y el contrato del puerto. Verificar que no queda Stooq ni Alpha Vantage como respaldo automático.
 - [ ] 2.7 Añadir a la sección 4 la regla de caché desactualizada y la tabla de respuestas con el proveedor caído (A11), la diferencia entre `422` y `503`, y el cuerpo `application/problem+json` con `Retry-After`. Verificar contra los escenarios "Proveedor de mercado no disponible" de cada spec.
 
+- [ ] 2.8 Sustituir la tabla de componentes de la sección 2.2 por la de design.md ("Componentes principales") y añadir TA-Lib ≥ 0.6.5 a la sección 2.7 con la justificación de A12. Verificar que cada componente aparece en el diagrama de la sección 2.1 y viceversa.
+- [ ] 2.9 Añadir a la fila F3 de la sección 1.2 el histórico mínimo (periodo + 100 en el RSI y el ATR) y a la fila F5 la exclusión de las compras sin ATR suficiente. Verificar contra los deltas de `estrategias-indicador` y `operaciones-recomendadas`.
+
 ## 3. Tests (HU-1 a HU-5)
 
-- [ ] 3.1 Añadir a la sección 2.6 los tests con reloj fijo, la reconstrucción del cierre sin ajustar con un split conocido, la tolerancia de 1e-9 en rentabilidades frente a importes exactos, el contrato de import-linter, los tests de contrato del proveedor (de ficheros siempre; yfinance solo si se activa), el descarte de la barra del día en curso y la respuesta con caché desactualizada frente a `503`. Verificar que cada test cita la decisión de design.md que cubre.
+- [ ] 3.1 Añadir a la sección 2.6 los tests con reloj fijo, la reconstrucción del cierre sin ajustar con un split conocido, la tolerancia de 1e-9 en rentabilidades frente a importes exactos, el contrato de import-linter, los tests de contrato del proveedor (de ficheros siempre; yfinance solo si se activa), el descarte de la barra del día en curso la respuesta con caché desactualizada frente a `503`, los tests de contrato de TA-Lib contra valores de referencia de StockCharts y el oráculo de Wilder solo de tests, y los escenarios de histórico mínimo (100 → "Sin datos suficientes", 114 → señal) y de compra sin ATR. Verificar que cada test cita la decisión de design.md que cubre.
 
 ## 4. DevOps (HU-1 a HU-5)
 

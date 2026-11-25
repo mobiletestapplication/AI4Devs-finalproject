@@ -64,9 +64,11 @@ flowchart LR
             P4[[CachePrecios]]
             P5[[Reloj]]
             P6[[ClienteLLM · S1 opcional]]
+            P7[[IndicadoresTecnicos]]
         end
 
         APP --> P1 & P3 & P5 & P6
+        DOM --> P7
         MDS --> P2 & P4
     end
 
@@ -75,6 +77,7 @@ flowchart LR
     P3 -.-> SQL[Repositorios<br/>SQLAlchemy 2 + Alembic]
     P4 -.-> SQL
     P5 -.-> CLK[Reloj del sistema<br/>fijo en tests]
+    P7 -.-> TAL[Adaptador TA-Lib<br/>RSI · SMA · ATR · futuros MACD/Bollinger]
     P6 -.-> LLM[Adaptador LLM<br/>salida JSON validada]
     SQL --> DB[(PostgreSQL 16)]
     PRV -->|HTTP| EXT[Proveedor externo gratuito]
@@ -84,7 +87,7 @@ flowchart LR
 |---|---|---|---|
 | posiciones | posiciones, precio de referencia, fecha actual | rendimiento, días de tenencia, ST/LT | importacion-cartera |
 | twr | posiciones, cierres sin ajustar, calendario | rentabilidades diarias, TWR, series, curva | rentabilidad-twr |
-| indicadores | OHLC ajustado por splits | RSI, SMA y ATR de Wilder | estrategias-indicador |
+| indicadores | OHLC ajustado por splits | RSI, SMA y ATR de Wilder (calculados por el puerto `IndicadoresTecnicos`), mínimo de sesiones | estrategias-indicador |
 | estrategias | indicadores y parámetros | señal, intensidad, fecha de inicio | estrategias-indicador |
 | backtest | posiciones, OHLC ajustado con calentamiento | simulaciones, métricas, comparativa, mejoras | backtesting |
 | recomendaciones | señales, ATR, posiciones, fecha actual | hasta 10 operaciones con niveles y avisos | operaciones-recomendadas |
@@ -110,7 +113,7 @@ Dependencias del dominio, sin ciclos: `posiciones → twr → backtest`, `indica
 - **Proveedor:** ver A10.
 
 ### A5. Servicio de datos de mercado
-- **Rango con calentamiento:** desde la primera compra menos 300 días naturales (cubren las 200 sesiones de la SMA larga por defecto) hasta hoy, calculado una sola vez por petición para todos los tickers.
+- **Rango con calentamiento:** desde la primera compra menos el máximo de sesiones que necesitan la estrategia y el ATR(14) (A12), multiplicado por 1,5 para pasar a días naturales, hasta hoy. Se calcula una sola vez por petición para todos los tickers. Con los parámetros por defecto son 300 días (200 sesiones de la SMA larga × 1,5); con RSI(50) serían 225 días (150 × 1,5).
 - **Calendario de sesiones:** la unión de las fechas con datos de los tickers de la cartera; los huecos de un ticker se rellenan con su cierre anterior, como indica rentabilidad-twr. No hace falta una librería de calendario bursátil.
 - **Cobertura descargada:** la tabla `COBERTURA_PRECIO` registra, por ticker, el rango `desde`-`hasta` ya pedido al proveedor, cuándo se actualizó y el último split conocido. Las filas de `PRECIO_DIARIO` no bastan, porque los fines de semana, los festivos o una salida a bolsa reciente dejan huecos que no significan "falta descargar". Solo se descarga lo que falta por cada extremo del rango.
 - **Refresco:** las fechas pasadas son inmutables en caché. Se vuelve a descargar desde `hasta` cuando la cobertura de un ticker tiene más de 6 horas, en un único lote para todos los tickers afectados. Las filas se escriben con upsert (`ON CONFLICT DO UPDATE`).
@@ -179,6 +182,53 @@ Regla: **se usa la caché aunque esté desactualizada**, y solo se responde `503
 - **Cuerpo del `503`:** formato estándar de errores HTTP (`application/problem+json`) con tipo, título y detalle, sin datos internos del proveedor, y cabecera `Retry-After: 60`, que el frontend usa para el botón de reintentar.
 - **Alternativa descartada:** `503` en cuanto falla el proveedor. Bloquearía el dashboard aunque los datos de la sesión anterior estén en caché.
 
+### A12. Indicadores técnicos: TA-Lib detrás de un puerto
+El catálogo de estrategias crecerá (MACD, Bollinger…), así que el cálculo numérico de los indicadores se delega en una librería detrás del puerto `IndicadoresTecnicos`. La lógica que exigen las specs sigue siendo propia del dominio:
+- reglas de señal;
+- intensidad;
+- "Sin datos suficientes";
+- fecha de inicio de la señal.
+
+| Criterio | Propia | pandas-ta | TA-Lib |
+|---|---|---|---|
+| Crecimiento del catálogo | Cada indicador se implementa y valida a mano | Más de 130 indicadores | Más de 150 indicadores, estándar del sector |
+| Mantenimiento | Del proyecto | En declive: un fork advierte de que el original se archivará si no hay más apoyo antes del 1-7-2026; NumPy 2 sobre todo vía forks | Activo; wheels binarias con la librería C incluida desde la 0.6.5 |
+| Docker | Sin dependencias nativas | Sin dependencias nativas | Dependencia nativa, sin compilador gracias a los wheels |
+| Arranque de Wilder | Control total | Parcial | "Periodo inestable" configurable con `set_unstable_period()` |
+
+- **Elegido:** TA-Lib (paquete `TA-Lib` ≥ 0.6.5, emparejado con NumPy 2) como adaptador del puerto `IndicadoresTecnicos`. El puerto recibe series de pandas y devuelve series alineadas por fecha.
+- **Histórico mínimo:** el periodo en las SMA y el periodo + 100 sesiones en el RSI y el ATR (delta de `estrategias-indicador`). Así el peso del arranque del suavizado queda por debajo del 0,1 % y no hace falta configurar el periodo inestable de TA-Lib. Las compras sin ATR suficiente no se recomiendan (delta de `operaciones-recomendadas`).
+- **Validación:**
+  - tests de contrato del adaptador con fixtures de valores de referencia publicados (tabla de StockCharts ChartSchool para RSI(14) y ATR(14)), con tolerancia de 1e-6;
+  - una implementación mínima de RSI y ATR de Wilder **solo en los tests**, como oráculo independiente.
+- **Alternativa descartada:** implementación propia en producción. Es razonable con 3 indicadores, pero no escala a un catálogo que crece.
+- **Alternativa descartada:** pandas-ta, por el riesgo de mantenimiento.
+- **Sacrificio:** la imagen de la API gana una dependencia nativa. Si los wheels no cubren la plataforma de un desarrollador, habrá que compilar la librería C.
+
+### Componentes principales
+| Componente | Tecnología | Responsabilidad |
+|---|---|---|
+| Frontend SPA | React 18 + TypeScript + Vite | Carga del XLSX, Watchlist, paneles de TWR, señales, backtest y recomendaciones; estrategia seleccionada compartida; avisos legales |
+| Datos del servidor y tablas | TanStack Query · TanStack Table | Caché de peticiones y recarga tras importar; ordenación y filtros |
+| Gráficos | Recharts · Lightweight Charts | Barras de TWR y curvas base 100; precio con el indicador en un panel inferior y marcas de cambio de señal |
+| API REST | FastAPI · Pydantic v2 · Uvicorn | Validación, OpenAPI y traducción centralizada de errores (A7), con `application/problem+json` y `Retry-After` (A11) |
+| Casos de uso | Python | Un caso de uso por operación; orquestan dominio y puertos; transacción de la importación |
+| Servicio de datos de mercado | Python · pandas | Rango con calentamiento, calendario, cobertura y refresco, barra del día, invalidación por split, normalización a dos series y caché desactualizada (A4, A5, A11) |
+| Dominio · posiciones | Python · `Decimal` | Precio de referencia, rendimiento, días de tenencia y ST/LT |
+| Dominio · TWR | pandas (float64) | Valoración diaria sin ajustar, rentabilidad con flujos, TWR acumulada, anualizada, mensual y semanal, curva base 100 |
+| Dominio · indicadores | Python, sobre el puerto `IndicadoresTecnicos` | Histórico mínimo, "Sin datos suficientes" y alineación de series |
+| Dominio · estrategias | Python | Catálogo, validación de parámetros, reglas, intensidad y fecha de inicio de la señal |
+| Dominio · backtest | pandas | Simulación sin sesgo de anticipación, métricas, comparativa y mejoras |
+| Dominio · recomendaciones | Python · `Decimal` | Hasta 10 operaciones, stop-loss y objetivo por ATR, aviso fiscal |
+| Adaptador XLSX | openpyxl · defusedxml | Seguridad del fichero, parseo, cabeceras flexibles y validación por fila |
+| Adaptador proveedor de precios | yfinance (`auto_adjust=False`) · proveedor de ficheros | OHLC y splits; errores clasificados, símbolos y `Decimal` (A10) |
+| Adaptador indicadores | TA-Lib ≥ 0.6.5 | RSI, SMA y ATR de Wilder, y los indicadores futuros (A12) |
+| Repositorios y caché | SQLAlchemy 2 · Alembic | Cartera vigente atómica, `PRECIO_DIARIO` y `COBERTURA_PRECIO` con upsert; migraciones |
+| Reloj | `datetime` · `zoneinfo` | Fecha y hora con zona de Nueva York; fijo en tests (A6) |
+| Cliente LLM (S1, opcional) | SDK del proveedor de LLM | Justificación con salida JSON validada; no influye en el orden |
+| Base de datos | PostgreSQL 16 | `NUMERIC`, CHECK y transacciones |
+| Calidad de arquitectura | import-linter · ruff · mypy | Que el dominio no importe adaptadores (incluido TA-Lib) ni infraestructura; lint y tipos |
+
 ### Modelo de datos
 ```mermaid
 erDiagram
@@ -207,6 +257,7 @@ erDiagram
 ## Risks / Trade-offs
 
 - [El proveedor no devuelve eventos de split o los corrige más tarde] → invalidación por `ultimo_split` (A5), que vuelve a descargar y normalizar todo el histórico del ticker; test de contrato con un ticker con splits conocidos.
+- [TA-Lib cambia ligeramente los resultados entre versiones] → versión fijada en el lock de dependencias y tests de contrato con valores de referencia.
 - [Yahoo bloquea las peticiones durante la grabación de la demo] → proveedor de ficheros (A10) y caché ya poblada.
 - [yfinance es una librería no oficial y puede romperse o limitar peticiones] → puerto `ProveedorPrecios`, caché persistente y `503` explícito.
 - [import-linter solo protege si se ejecuta] → forma parte del job de lint de CI y bloquea el merge.
