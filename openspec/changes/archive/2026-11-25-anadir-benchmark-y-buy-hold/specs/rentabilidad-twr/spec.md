@@ -35,7 +35,7 @@ El sistema SHALL construir una curva de valor diaria con base 100 para la carter
 ## MODIFIED Requirements
 
 ### Requirement: Consulta de la TWR por HTTP
-El sistema SHALL responder a `GET /api/cartera/rentabilidad/twr` con `200 OK` y la fecha de inicio, la fecha de fin, la TWR acumulada, la TWR anualizada o el motivo de no aplicabilidad, la serie mensual y la serie semanal, expresando las rentabilidades como proporciones decimales con al menos 6 decimales, y SHALL incluir además el ticker del índice de referencia, su TWR acumulada y anualizada, la diferencia frente al índice, el valor del índice y la diferencia en cada periodo de las series mensual y semanal, y la curva de valor base 100 de la cartera y del índice.
+El sistema SHALL responder a `GET /api/cartera/rentabilidad/twr` con `200 OK` y las fechas de inicio y fin, la TWR acumulada, la anualizada o el motivo de no aplicabilidad y las series mensual y semanal, como proporciones decimales con al menos 6 decimales, y SHALL incluir además el ticker del índice de referencia, su TWR acumulada y anualizada, la diferencia frente a él, el valor del índice y la diferencia en cada periodo de las series, y la curva base 100 de la cartera y del índice.
 
 #### Scenario: Cartera importada
 - **WHEN** existe una cartera importada y el cliente envía `GET /api/cartera/rentabilidad/twr`
