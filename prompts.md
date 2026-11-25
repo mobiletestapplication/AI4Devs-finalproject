@@ -61,14 +61,14 @@ No memorices nada.
 Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda de arquitectura o diseño si no puedes definir claramente el requisito.
 
 **Prompt 2:**
-**Modelo:** Opus 5.5 xHigh
+**Modelo:** Opus 5.5 xMedium
 **Herramienta:** Claude Code
 Compara yfinance, Stooq y Alpha Vantage como proveedor gratuito de precios diarios OHLC y de última cotización para el MVP. Diseña la abstracción que permita cambiar de proveedor sin tocar el dominio, la estrategia de caché en base de datos y qué debe responder la API cuando el proveedor no esté disponible.
 
 ### **2.2. Descripción de componentes principales:**
 
 **Prompt 1:**
-**Modelo:** Opus 5.5 xHigh
+**Modelo:** Opus 5.5 xMedium
 **Herramienta:** Claude Code
 Genera la tabla de componentes principales (componente, tecnología, responsabilidad) coherente con el diagrama de la sección 2.1. Para los indicadores (RSI y ATR de Wilder, SMA), razona si conviene una implementación propia validada contra valores de referencia o una librería como pandas-ta o TA-Lib.
 Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda de los componentes principales si no puedes definir claramente el requisito.
@@ -78,7 +78,7 @@ Al terminar, dime que features necesitan mas informacion y entrevistame para cua
 **Prompt 1:**
 **Modelo:** Opus 5.5 xHigh
 **Herramienta:** Claude Code
-Propón la estructura de carpetas del repositorio (backend FastAPI por capas api/application/domain/adapters/infrastructure, frontend React + Vite, `openspec/`) explicando el propósito de cada carpeta. Añade una tabla de trazabilidad entre los artefactos de OpenSpec (proposal, specs, design, tasks) y las secciones del readme.md.
+Propón la estructura de directorios del repositorio (backend FastAPI por capas api/application/domain/adapters/infrastructure, frontend React + Vite, `openspec/`) explicando el propósito de cada directorio. Añade una tabla de trazabilidad entre los artefactos de OpenSpec (proposal, specs, design, tasks) y las secciones del readme.md.
 Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda del proyecto y su estructura de ficheros si no puedes definir claramente el requisito.
 
 ### **2.4. Infraestructura y despliegue**
@@ -94,7 +94,7 @@ Al terminar, dime que features necesitan mas informacion y entrevistame para cua
 **Prompt 1:**
 **Modelo:** Opus 5.5 xHigh
 **Herramienta:** Claude Code
-Actúa como revisor de seguridad con OWASP Top 10 como referencia. El vector de ataque principal es la subida de un fichero XLSX. Enumera en una tabla riesgo → control las amenazas concretas (zip bomb, `.xlsm` con macros, XXE, inyección de fórmulas, path traversal, abuso de la API, secretos, dependencias vulnerables y prompt injection en la feature opcional con LLM) indicando el código HTTP con el que se rechaza cada caso.
+Actúa como revisor de seguridad con OWASP Top 10 2025 como referencia. El vector de ataque principal es la subida de un fichero XLSX. Enumera en una tabla riesgo → control las amenazas concretas (zip bomb, `.xlsm` con macros, XXE, inyección de fórmulas, path traversal, abuso de la API, secretos, dependencias vulnerables y prompt injection en la feature opcional con LLM) indicando el código HTTP con el que se rechaza cada caso.
 Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda seguridad en la aplicacion o en su codigo si no puedes definir claramente el requisito.
 
 ### **2.6. Tests**
@@ -103,7 +103,7 @@ Al terminar, dime que features necesitan mas informacion y entrevistame para cua
 **Modelo:** Opus 5.5 xHigh
 **Herramienta:** Claude Code
 Traduce los escenarios WHEN/THEN de cada spec a una estrategia de tests: unitarios del dominio con casos calculados a mano (ST/LT en el aniversario de la compra y en años bisiestos, TWR neutral frente a aportaciones, ejecución del backtest sin sesgo de anticipación), integración API + PostgreSQL con Testcontainers y el proveedor de precios sustituido por un *fake*, E2E con Playwright del flujo principal y fixtures maliciosos para seguridad.
-Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda en los test de los requisitos y de la  aplicacion si no puedes definir claramente el requisito.
+Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda en los test de los requisitos y de la  aplicacion si no puedes definir claramente la spec.
 
 ---
 
