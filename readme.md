@@ -48,7 +48,7 @@ Modalidad: **Opción A** (código y documentación en el mismo repositorio). Rep
 - Saber qué posiciones generarían ganancias a corto o largo plazo al venderse.
 - Contrastar sus decisiones discrecionales con estrategias sistemáticas y reproducibles.
 
-**Valor.** Métrica de rendimiento estándar del sector (TWR, alineada con el criterio GIPS de no anualizar periodos < 1 año), visibilidad fiscal y estrategias cuantitativas verificables mediante backtest.
+**Valor.** Métrica de rendimiento estándar del sector (TWR -Time-Weighted Rate of Return- o Tasa de Rendimiento Ponderada en el Tiempo, alineada con el criterio GIPS de no anualizar periodos < 1 año), visibilidad fiscal y estrategias cuantitativas verificables mediante backtests.
 
 **Para quién.** Inversores particulares y estudiantes de finanzas/trading que registran sus posiciones en Excel.
 

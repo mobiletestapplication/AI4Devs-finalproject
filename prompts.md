@@ -17,10 +17,36 @@ Puedes añadir adicionalmente la conversación completa como link o archivo adju
 ## 1. Descripción general del producto
 
 **Prompt 1:**
+**Modelo:** Opus 5.5 xHigh
+**Herramienta:** Claude Code
+En Plan Mode quiero explorar que criterios sugieres para un dashboard de trading de una cartera de inversion simulada. Me gustaria utilizar OpenSpec para importar la cartera, calcular rendimiento ponderado en el tiempo, sugerir una estrategia, hacer backtesting, y recomendar un numero limitado de operaciones de trading.
+Que sugerencias de funcionalidades tienes? Razonala necesidad de las mismas.
+No memorices nada.
+ 
 
 **Prompt 2:**
+**Modelo:** Opus 5.5 xHigh
+**Herramienta:** Claude Code
+/opsx:explore
+ Vamos a documentar las specs de OpenSpec de un dashboard de trading moderno de una cartera de inversion simulada en un proyecto nuevo. No hay codigo que leer todavia.
+ Antes de nada, sigue estas 4 premisas para las specs que se escriben en `openspec/specs/` con el formato exacto de una spec VIVA de OpenSpec:
+  1. Un `## Purpose` de una o dos frases concisas y debajo `## Requirements` con `### Requirement:` en los que el sistema SHALL hacer algo, y bajo cada uno al menos un `#### Scenario:` de cuatro almohadillas con sus dos viñetas `- **WHEN**` y `- **THEN**`.
+  2. En castellano, salvo las mayúsculas RFC-2119.
+  3. NO uses secciones ADDED, MODIFIED ni REMOVED: eso es de un delta, y esto no es un delta, es la verdad actual del sistema.
+  4. Describe solo comportamiento observable desde fuera. Nada de nombres de clase ni de rutas de archivo todavia. Para el backend, observable = la petición y la respuesta HTTP. Para el frontend, observable = lo que una persona ve y puede hacer en pantalla
+
+ La primera feature tiene como entrada por el frontend un fichero XLSX que contiene las posiciones abiertas y cerradas, una vez cargado, el frontend muestra las acciones en la cartera en forma de tabla (Watchlist) asi como precio, rendimiento total, y si son Short o Long Capital Gains.
+ La segunda feature que calcule el "Time-Weighted Rate of Return" (TWR) o "Tasa de Retorno Ponderada en el Tiempo" anualizada, mensual y semanal midiendo de manera precisa el rendimiento del inversor en las operaciones incluso si no se han cerrado aun (ya que son PNL).
+ La tercera feature creara una estrategia de inversion basada en un indicador aplicada a las acciones que componen la cartera para ayudar con la toma de decisiones.
+ La cuarta feature realizara backtesting de las operaciones realizadas en el pasado calculando rentabilidades y estrategias de mejora.
+ La quinta feature mostrara 10 operaciones de trading recomendadas sobre los pnemonicos (tickers) que forman la cartera existente de acciones en base a la estrategia de trading seleccionada.
+ Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda si no puedes definir claramente el requisito.
+
 
 **Prompt 3:**
+**Modelo:** Opus 5.5 xHigh
+**Herramienta:** Claude Code
+/opsx:propose resuelve las divergencias entre las specs y el fichero readme.md que edite a mano. Las specs son la fuente de verdad.
 
 ---
 
@@ -29,6 +55,7 @@ Puedes añadir adicionalmente la conversación completa como link o archivo adju
 ### **2.1. Diagrama de arquitectura:**
 
 **Prompt 1:**
+Al terminar, dime que features necesitan mas informacion y entrevistame para cualquier duda de arquitectura o diseño si no puedes definir claramente el requisito.
 
 **Prompt 2:**
 
