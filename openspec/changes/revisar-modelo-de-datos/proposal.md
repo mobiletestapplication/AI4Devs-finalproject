@@ -24,7 +24,9 @@ Cubre la feature **F1 (Importación y Watchlist)** y la historia **HU-1**.
 - **Formato del XLSX (spec):**
   - **tipos de celda:** celdas nativas de fecha y número más texto ISO `AAAA-MM-DD` y número con punto decimal;
   - **cantidades fraccionarias:** hasta 6 decimales;
-  - **columnas y filas:** las columnas adicionales se ignoran y las filas totalmente vacías se saltan.
+  - **columnas y filas:** las columnas adicionales se ignoran y las filas totalmente vacías se saltan;
+  - **precios con más de 6 decimales:** se redondean a 6;
+  - **fichero sin filas de datos:** se rechaza con `422`.
 - **Documentación:**
   - qué se guarda y qué se calcula bajo demanda;
   - el `erDiagram` completo;
@@ -36,7 +38,7 @@ Cubre la feature **F1 (Importación y Watchlist)** y la historia **HU-1**.
 _Ninguna._
 
 ### Modified Capabilities
-- `importacion-cartera`: nuevos requisitos de tipos de celda admitidos, cantidades fraccionarias, columnas adicionales y filas vacías.
+- `importacion-cartera`: nuevos requisitos de tipos de celda admitidos, cantidades fraccionarias, columnas adicionales y filas vacías, precisión de los precios y fichero sin filas de datos.
 
 ## Fuera de alcance
 

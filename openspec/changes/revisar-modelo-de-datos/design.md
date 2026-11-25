@@ -60,7 +60,9 @@ Ver proposal.md (Why) y el delta de `importacion-cartera`. Punto de partida:
 
 ### M8. `NUMERIC` frente a float en toda la cadena
 - **Base de datos:** `NUMERIC(18,6)`, que admite hasta 999.999.999.999,999999. Los productos (cantidad × precio, hasta 12 decimales) no se guardan: se calculan en `Decimal` en la aplicación y se redondean al serializar.
-- **Entrada desde el XLSX:** openpyxl devuelve las celdas numéricas como `float`. Se convierten con `Decimal(repr(valor))` y nunca con `Decimal(valor)`: el float de 172,5 se convierte bien, pero 0,1 daría 0,1000000000000000055511… La comprobación de decimales (≤ 6) se hace sobre ese `Decimal` y antes de insertar, porque `NUMERIC(18,6)` redondearía sin avisar.
+- **Entrada desde el XLSX:** openpyxl devuelve las celdas numéricas como `float`. Se convierten con `Decimal(repr(valor))` y nunca con `Decimal(valor)`: el float de 172,5 se convierte bien, pero 0,1 daría 0,1000000000000000055511… Sobre ese `Decimal` y antes de insertar:
+  - la **cantidad** con más de 6 decimales se rechaza (`422`);
+  - los **precios** con más de 6 decimales se redondean explícitamente con `quantize(Decimal('0.000001'), ROUND_HALF_UP)` (por ejemplo, 172,1234565 → 172,123457). Coincide con el redondeo de PostgreSQL para valores positivos, pero se hace en la aplicación para que el valor usado en los cálculos sea el mismo que el guardado, sin depender de la base de datos.
 - **Entrada desde el proveedor:** pandas entrega float64; el adaptador convierte con `Decimal(repr(round(x, 6)))` (A10).
 - **ORM:** SQLAlchemy `Numeric(18, 6, asdecimal=True)`, que devuelve `Decimal`.
 - **Paso al cálculo de series** (TWR, indicadores): conversión explícita a float64 en la frontera de A8. Los importes que se muestran (rendimiento, P&L, stop-loss, objetivo, capital) se recalculan en `Decimal`.
@@ -188,11 +190,11 @@ En `POSICION` hay además `CHECK ((fecha_venta IS NULL) = (precio_venta IS NULL)
 - [Borrar la importación anterior impide recuperar la cartera tras una importación equivocada] → la confirmación de sustitución en pantalla (spec viva) es la protección prevista.
 - [`NUMERIC(18,6)` redondea silenciosamente si la aplicación no valida antes] → la validación de 6 decimales va antes de insertar y está probada por un escenario.
 
-## Open Questions
-
-Estas dos preguntas cambian el comportamiento observable: si la respuesta es distinta de la actual, hay que añadir un escenario al delta.
-- **Precios con más de 6 decimales:** ¿`422` como la cantidad, o se redondean a 6? Hoy `NUMERIC(18,6)` los redondearía sin avisar si la aplicación no los rechaza.
-- **Fichero con cabeceras y sin filas de datos:** ¿`422` o `201` con una cartera vacía? Ninguna spec lo dice. El diseño anterior lo impedía con `CHECK posiciones >= 1`, que ahora se elimina.
+### M10. Decisiones de precisión y de fichero vacío
+- **Precios con más de 6 decimales:** se redondean a 6 (mitades hacia arriba) en lugar de rechazarse.
+  - **Por qué:** un precio con más decimales suele venir de un cálculo en la hoja (por ejemplo, un precio medio). Rechazarlo obligaría a la persona a redondear a mano, y 6 decimales están muy por debajo del céntimo.
+  - **Asimetría con la cantidad, que sí se rechaza:** redondear una cantidad cambia cuántas acciones se tienen, mientras que el redondeo de un precio no altera el resultado visible a 2 decimales.
+- **Fichero con cabeceras y sin filas de datos:** `422`, también si todas las filas están vacías. Una importación siempre deja una cartera con al menos una posición, y "sin cartera" sigue siendo solo la ausencia de la fila en `CARTERA_VIGENTE`. La regla es de aplicación: al eliminar los recuentos de `IMPORTACION` no hay CHECK que la exprese.
 
 ## Migration Plan
 

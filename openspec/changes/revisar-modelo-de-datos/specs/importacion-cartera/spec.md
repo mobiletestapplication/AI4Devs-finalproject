@@ -46,3 +46,25 @@ El sistema SHALL ignorar las columnas cuya cabecera no sea ninguna de las de ref
 #### Scenario: Fila a medias
 - **WHEN** la fila 3 solo tiene relleno el ticker
 - **THEN** el sistema responde `422 Unprocessable Entity` con los campos obligatorios que faltan en la fila 3
+
+### Requirement: Precisión de los precios
+El sistema SHALL redondear los precios de compra y de venta con más de 6 decimales a 6 decimales, al valor más cercano y con las mitades hacia arriba, sin rechazar la fila, y SHALL usar el precio redondeado en todos los cálculos.
+
+#### Scenario: Precio con 7 decimales
+- **WHEN** la fila 2 tiene un precio de compra de 172,1234565 USD
+- **THEN** la posición se importa con precio de compra 172,123457 USD
+
+#### Scenario: Precio con 6 decimales o menos
+- **WHEN** la fila 2 tiene un precio de compra de 172,5 USD
+- **THEN** la posición se importa con precio de compra 172,5 USD sin modificarlo
+
+### Requirement: Fichero sin filas de datos
+El sistema SHALL rechazar con `422 Unprocessable Entity`, sin modificar la cartera existente, un fichero cuya primera hoja tenga las cabeceras pero ninguna fila de datos, incluido el caso en que todas las filas posteriores a las cabeceras estén vacías.
+
+#### Scenario: Solo cabeceras
+- **WHEN** el cliente envía un XLSX con la fila de cabeceras válida y ninguna fila más
+- **THEN** el sistema responde `422 Unprocessable Entity` indicando que el fichero no contiene posiciones, y la cartera existente no cambia
+
+#### Scenario: Solo filas vacías
+- **WHEN** el cliente envía un XLSX con la fila de cabeceras válida y las filas 2 a 5 completamente vacías
+- **THEN** el sistema responde `422 Unprocessable Entity` indicando que el fichero no contiene posiciones
