@@ -34,6 +34,7 @@ Pendiente (Entrega Final). Despliegue opcional; evidencia mínima prevista: víd
 https://github.com/mobiletestapplication/AI4Devs-finalproject — rama `feature/entrega-1-sg`
 
 Modalidad: **Opción A** (código y documentación en el mismo repositorio). Repositorio público.
+
 ---
 
 ## 1. Descripción general del producto
@@ -43,6 +44,7 @@ Modalidad: **Opción A** (código y documentación en el mismo repositorio). Rep
 ### **1.1. Objetivo:**
 
 > Propósito del producto. Qué valor aporta, qué soluciona, y para quién.
+
 **Problema.** El inversor particular que gestiona una cartera (real o simulada) en hojas de cálculo no dispone de una forma fiable de:
 - Medir su rendimiento real aislando el efecto del momento y del importe de cada compra y venta (la rentabilidad simple sobre el capital aportado distorsiona el resultado).
 - Saber qué posiciones generarían ganancias a corto o largo plazo al venderse.
@@ -243,6 +245,7 @@ flowchart LR
 ### **2.5. Seguridad**
 
 > Enumera y describe las prácticas de seguridad principales que se han implementado en el proyecto, añadiendo ejemplos si procede
+
 El vector de ataque principal es la **subida de ficheros**. Controles previstos:
 
 | Riesgo | Control |
