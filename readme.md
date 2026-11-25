@@ -244,10 +244,10 @@ flowchart LR
 | Dominio · estrategias | Python | Catálogo, validación de parámetros, reglas, intensidad y fecha de inicio de la señal |
 | Dominio · backtest | pandas | Simulación sin sesgo de anticipación, métricas, comparativa y mejoras |
 | Dominio · recomendaciones | Python · `Decimal` | Hasta 10 operaciones, stop-loss y objetivo por ATR, aviso fiscal |
-| Adaptador XLSX | openpyxl · defusedxml | Seguridad del fichero en el orden de la sección 2.5 (tamaño en streaming, firma, índice ZIP, content types sin macros, objetos, vínculos ni DOCTYPE), parseo `read_only` + `data_only` con ≤ 10.000 filas y ≤ 10 s, cabeceras flexibles y validación por fila (ticker con el patrón `^[A-Z.\-]{1,10}$`, cantidad > 0, precios > 0, fechas no futuras, venta ≥ compra, venta completa) |
+| Adaptador XLSX | openpyxl · defusedxml | Seguridad del fichero en el orden de la sección 2.5 (tamaño en streaming, firma, índice ZIP, content types sin macros, objetos, vínculos ni DOCTYPE), parseo `read_only` + `data_only` con ≤ 10.000 filas y ≤ 10 s, cabeceras flexibles con columnas adicionales ignoradas y filas totalmente vacías saltadas, celdas de fecha de Excel o texto `AAAA-MM-DD` y números o texto con punto decimal convertidos con `Decimal(repr(...))`, y validación por fila (ticker con el patrón `^[A-Z.\-]{1,10}$`, cantidad > 0 con ≤ 6 decimales, precios > 0 redondeados a 6 decimales, fechas no futuras, venta ≥ compra, venta completa) |
 | Adaptador proveedor de precios | yfinance (`auto_adjust=False`) · proveedor de ficheros | OHLC y splits; errores clasificados, traducción de símbolos y conversión a `Decimal` |
 | Adaptador indicadores | TA-Lib ≥ 0.6.5 | RSI, SMA y ATR de Wilder, y los indicadores futuros |
-| Repositorios y caché | SQLAlchemy 2 · Alembic | Cartera vigente atómica, `PRECIO_DIARIO` y `COBERTURA_PRECIO` con upsert; migraciones |
+| Repositorios y caché | SQLAlchemy 2 · Alembic | Cartera vigente atómica (`CARTERA_VIGENTE` con `pg_advisory_xact_lock`, sección 3.2), `PRECIO_DIARIO` y `COBERTURA_PRECIO` con upsert; migraciones |
 | Reloj | `datetime` · `zoneinfo` | Fecha y hora con zona de Nueva York; fijo en tests |
 | Cliente LLM (S1, opcional) | SDK del proveedor de LLM | Justificación con salida JSON validada; no influye en el orden |
 | Base de datos | PostgreSQL 16 | `NUMERIC`, CHECK y transacciones |
@@ -538,7 +538,8 @@ El script `tests/trazabilidad.py` lee `openspec/specs/**/spec.md` y la lista de 
 
 **Unitarios (dominio)**, con los ejemplos de cada escenario y además:
 - **ST/LT:** venta en el aniversario de la compra → Short-Term y al día siguiente → Long-Term; compra el 2024-02-29 → Short-Term si se vende el 2025-02-28 y Long-Term el 2025-03-01; compra el 2023-02-28 → Short-Term el 2024-02-28 y Long-Term el 2024-02-29.
-- **Rendimiento:** ganancia no realizada en abiertas y pérdida realizada en cerradas.
+- **Rendimiento:** ganancia no realizada en abiertas y pérdida realizada en cerradas; 2,5 acciones compradas a 100 USD con referencia 120 USD → 50 USD.
+- **Formato del XLSX** (escenarios de `importacion-cartera`): `2024-01-10` como texto → se importa; `10/01/2024` → `422` con el formato `AAAA-MM-DD`; `172,50` como texto → `422` por la coma decimal; celda de fecha con hora 2024-12-20 15:30 → 2024-12-20; cantidad 0,1234567 → `422` por más de 6 decimales; precio 172,1234565 → 172,123457 y 172,5 sin cambios; columna `Comisión` → ignorada; filas 2 y 4 válidas con la 3 vacía → `201` con 2 posiciones; fila con solo el ticker → `422`; solo cabeceras o solo filas vacías → `422` "el fichero no contiene posiciones".
 - **TWR:** sesiones de compra, sin flujos y de venta; neutralidad frente a aportaciones (10 + 10 acciones → 21 %); compra en sábado → aportación del lunes y 5 % esa sesión; venta en domingo → retirada del lunes y 1,82 %; no se anualiza un periodo < 365 días; semanas y meses parciales y sin inversión.
 - **TWR neutral frente a aportaciones (propiedad, Hypothesis):** con una serie de precios y aportaciones aleatorias, multiplicar todas las cantidades por k > 0, o cambiar el importe de las compras posteriores manteniendo los precios, no cambia la TWR.
 - **Indicadores:** intensidad de las señales (incluido el límite de 100); histórico mínimo: RSI(14) con 100 sesiones → "Sin datos suficientes" y con 114 → señal calculada; RSI(21) con 115 → "Sin datos suficientes"; `cruce-medias` 50/200 con 200 sesiones → señal calculada.
@@ -554,8 +555,11 @@ El script `tests/trazabilidad.py` lee `openspec/specs/**/spec.md` y la lista de 
 - TA-Lib: RSI(14) y ATR(14) contra los valores de referencia publicados por StockCharts ChartSchool con tolerancia de 1e-6, más una implementación mínima de Wilder **solo en los tests** como oráculo independiente.
 - Reconstrucción del cierre sin ajustar con un split 10:1 el 2024-06-10: cierre ajustado 120,00 el 2024-06-07 → 1.200,00 sin ajustar.
 
-**Integración:** API + PostgreSQL con Testcontainers (igual en local y en CI) y el proveedor de ficheros; un test por escenario HTTP de cada spec (subida del XLSX → persistencia → `GET /api/cartera/posiciones`, segunda importación que sustituye a la primera, códigos `409`/`422`/`503`…). Además, cuatro casos de arquitectura que no salen de ningún escenario:
+**Integración:** API + PostgreSQL con Testcontainers (igual en local y en CI) y el proveedor de ficheros; un test por escenario HTTP de cada spec (subida del XLSX → persistencia → `GET /api/cartera/posiciones`, segunda importación que sustituye a la primera, códigos `409`/`422`/`503`…). Además, casos de arquitectura que no salen de ningún escenario:
 - atomicidad de la sustitución, forzando un error a mitad de la inserción;
+- concurrencia: dos importaciones simultáneas dejan exactamente una importación;
+- un `IntegrityError` por cada CHECK del esquema (cantidad 0, precio −1, venta sin precio, venta anterior a la compra, fila 1, ticker `aapl$` en `POSICION` y en `PRECIO_DIARIO`, `maximo < minimo`, `fuente` desconocida, `hasta < desde`), una segunda fila en `CARTERA_VIGENTE` y el borrado de la importación vigente (`RESTRICT`); 0,1 se guarda y se lee como `Decimal('0.100000')`;
+- la invalidación por split no deja lecturas con precios mezclados;
 - la caché evita una segunda llamada al proveedor;
 - con el proveedor caído, `200` si la caché cubre el rango (aunque esté desactualizada) y `503` con `Retry-After` si no lo cubre;
 - la barra del día en curso no se guarda.
@@ -631,48 +635,51 @@ Traza, vídeo y capturas se guardan como artefactos del CI cuando falla.
 
 ```mermaid
 erDiagram
+    CARTERA_VIGENTE ||--|| IMPORTACION : "apunta a"
     IMPORTACION ||--|{ POSICION : "contiene"
+    COBERTURA_PRECIO ||--o{ PRECIO_DIARIO : "cubre (por ticker, sin FK)"
 
+    CARTERA_VIGENTE {
+        boolean id PK "DEFAULT true; CHECK (id) -> una sola fila"
+        uuid importacion_id FK "NOT NULL; UNIQUE; ON DELETE RESTRICT"
+        timestamptz actualizada_en "NOT NULL"
+    }
     IMPORTACION {
-        uuid id PK
-        char fichero_sha256 "NOT NULL"
-        int posiciones "NOT NULL"
-        int abiertas "NOT NULL"
-        int cerradas "NOT NULL"
-        boolean vigente "NOT NULL; UNIQUE parcial WHERE vigente"
+        uuid id PK "UUIDv4"
+        char64 fichero_sha256 "NOT NULL; INDEX no único"
         timestamptz importada_en "NOT NULL"
     }
     POSICION {
         uuid id PK
-        uuid importacion_id FK "NOT NULL"
-        int fila "NOT NULL; fila del XLSX"
-        varchar ticker "NOT NULL; mayúsculas"
+        uuid importacion_id FK "NOT NULL; ON DELETE CASCADE; INDEX (importacion_id, ticker)"
+        int fila "NOT NULL; CHECK >= 2; UNIQUE (importacion_id, fila)"
+        varchar10 ticker "NOT NULL; CHECK ~ '^[A-Z.-]{1,10}$'"
         date fecha_compra "NOT NULL"
-        numeric cantidad "CHECK > 0"
-        numeric precio_compra "CHECK > 0"
+        numeric18_6 cantidad "NOT NULL; CHECK > 0"
+        numeric18_6 precio_compra "NOT NULL; CHECK > 0"
         date fecha_venta "NULL si abierta; CHECK >= fecha_compra"
-        numeric precio_venta "NULL si abierta; CHECK > 0"
+        numeric18_6 precio_venta "NULL si abierta; CHECK > 0"
     }
     PRECIO_DIARIO {
-        varchar ticker PK
+        varchar10 ticker PK "CHECK ~ '^[A-Z.-]{1,10}$'"
         date fecha PK
-        numeric apertura "NOT NULL; ajustado por splits"
-        numeric maximo "NOT NULL; ajustado por splits"
-        numeric minimo "NOT NULL; ajustado por splits"
-        numeric cierre "NOT NULL; ajustado por splits"
-        numeric cierre_sin_ajustar "NOT NULL; CHECK > 0"
-        varchar fuente "NOT NULL"
+        numeric18_6 apertura "NOT NULL; CHECK > 0; ajustado por splits"
+        numeric18_6 maximo "NOT NULL; CHECK > 0; CHECK maximo >= minimo"
+        numeric18_6 minimo "NOT NULL; CHECK > 0"
+        numeric18_6 cierre "NOT NULL; CHECK > 0; ajustado por splits"
+        numeric18_6 cierre_sin_ajustar "NOT NULL; CHECK > 0"
+        varchar fuente "NOT NULL; CHECK IN ('yfinance','ficheros')"
         timestamptz obtenido_en "NOT NULL"
     }
     COBERTURA_PRECIO {
-        varchar ticker PK
+        varchar10 ticker PK "CHECK ~ '^[A-Z.-]{1,10}$'"
         date desde "NOT NULL"
         date hasta "NOT NULL; CHECK hasta >= desde"
         timestamptz actualizado_en "NOT NULL"
         date ultimo_split "NULL si no hay splits"
     }
-    COBERTURA_PRECIO ||--o{ PRECIO_DIARIO : "cubre el rango de"
 ```
+En `POSICION` hay además `CHECK ((fecha_venta IS NULL) = (precio_venta IS NULL))` (venta completa).
 
 
 ### **3.2. Descripción de entidades principales:**
@@ -682,39 +689,87 @@ erDiagram
 
 | Entidad | Propósito | Claves y restricciones relevantes |
 |---|---|---|
-| `IMPORTACION` | Cada carga válida del XLSX; solo una es la cartera vigente | PK `id` (UUIDv4); índice único parcial sobre `vigente WHERE vigente` para garantizar una única cartera; índice en `fichero_sha256` |
-| `POSICION` | Una fila del fichero: posición abierta (sin venta) o cerrada (con fecha y precio de venta) | FK `importacion_id` con `ON DELETE CASCADE`; CHECK `cantidad > 0`, `precio_compra > 0`, `precio_venta > 0`; CHECK `(fecha_venta IS NULL) = (precio_venta IS NULL)` (venta completa); CHECK `fecha_venta >= fecha_compra`; índice (`importacion_id`, `ticker`) |
-| `PRECIO_DIARIO` | Caché OHLC diaria del proveedor de mercado, con dos series: el OHLC ajustado por splits y el cierre sin ajustar | PK compuesta (`ticker`, `fecha`); CHECK `cierre_sin_ajustar > 0`; se escribe con upsert. La apertura ajustada se usa para ejecutar el backtest, máximo/mínimo/cierre ajustados para el ATR y los indicadores, y `cierre_sin_ajustar` para la valoración (Watchlist, rendimiento, TWR) |
-| `COBERTURA_PRECIO` | Rango de fechas ya pedido al proveedor por ticker, cuándo se actualizó y el último split conocido | PK `ticker`; CHECK `hasta >= desde`. Se relaciona con `PRECIO_DIARIO` por `ticker`, sin FK, porque los precios se escriben con upsert por lotes. Hace falta porque las filas de `PRECIO_DIARIO` no bastan: fines de semana, festivos o una salida a bolsa reciente dejan huecos que no significan "falta descargar" |
+| `CARTERA_VIGENTE` | Tabla de una sola fila que apunta a la importación vigente; garantiza **exactamente una** cartera vigente o ninguna ("sin cartera" es la ausencia de la fila) | PK booleana `id DEFAULT true CHECK (id)`, que solo admite una fila; FK `importacion_id UNIQUE` con `ON DELETE RESTRICT`, que impide borrar por error la importación vigente |
+| `IMPORTACION` | Cada carga válida del XLSX | PK `id` (UUIDv4); `fichero_sha256 char(64)` con índice no único, solo para relacionar los logs (no se detectan duplicados). Sin recuentos: el número de posiciones, abiertas y cerradas se deduce de `POSICION` |
+| `POSICION` | Una fila del fichero: posición abierta (sin venta) o cerrada (con fecha y precio de venta) | FK `importacion_id` con `ON DELETE CASCADE`; `UNIQUE (importacion_id, fila)`; CHECK `fila >= 2`, patrón de ticker `^[A-Z.\-]{1,10}$`, `cantidad > 0`, `precio_compra > 0`, `precio_venta > 0`, venta completa y `fecha_venta >= fecha_compra`; índice (`importacion_id`, `ticker`) |
+| `PRECIO_DIARIO` | Caché OHLC diaria del proveedor de mercado, con dos series: el OHLC ajustado por splits y el cierre sin ajustar | PK compuesta (`ticker`, `fecha`); CHECK de precios > 0, `maximo >= minimo`, patrón de ticker y `fuente IN ('yfinance', 'ficheros')`; se escribe con upsert. La apertura ajustada se usa para ejecutar el backtest, máximo/mínimo/cierre ajustados para el ATR y los indicadores, y `cierre_sin_ajustar` para la valoración (Watchlist, rendimiento, TWR) |
+| `COBERTURA_PRECIO` | Rango de fechas ya pedido al proveedor por ticker, cuándo se actualizó y el último split conocido | PK `ticker`; CHECK `hasta >= desde` y patrón de ticker. Se relaciona con `PRECIO_DIARIO` por `ticker`, sin FK, porque los precios se escriben con upsert por lotes. Hace falta porque las filas de `PRECIO_DIARIO` no bastan: fines de semana, festivos o una salida a bolsa reciente dejan huecos que no significan "falta descargar" |
 
-**Datos derivados (no persistidos):** el estado (abierta/cerrada), el precio de referencia, el rendimiento, los días de tenencia y la plusvalía ST/LT se calculan al consultar las posiciones. La TWR, las señales, los backtests y las recomendaciones también se calculan bajo demanda. El catálogo de estrategias (`rsi`, `cruce-medias`) y sus rangos de parámetros se definen en código. El precio de referencia de las posiciones abiertas es el último cierre diario sin ajustar, con su fecha, tomado de la caché `PRECIO_DIARIO`; no se piden cotizaciones intradía.
+**Tipos:** importes, precios y cantidades en `NUMERIC(18,6)`; tickers en `varchar(10)`; fechas de negocio en `date` e instantes técnicos en `timestamptz`; identificadores UUIDv4.
 
-**La sustitución de la cartera** se hace en una única transacción de BD: se inserta la nueva `IMPORTACION` con sus posiciones, se marca como vigente y se desmarca la anterior. Si el fichero tiene cualquier error, no se escribe nada.
+**Restricciones que la BD no puede expresar** (las garantiza la aplicación): "fechas no futuras", porque depende de la fecha actual y PostgreSQL exige que los CHECK sean inmutables (se valida con el puerto `Reloj`); el máximo de 10.000 filas, porque las filas vacías saltadas dejan huecos en `fila`; la relación entre `cierre` y `cierre_sin_ajustar`; y que un fichero tenga al menos una posición. En `PRECIO_DIARIO` no se exige que `apertura` y `cierre` estén entre `minimo` y `maximo`, porque los datos ajustados del proveedor a veces se salen ligeramente de ese rango; el adaptador registra esas anomalías.
 
-**Formato del fichero de entrada (primera hoja)**
+**Sustitución de la cartera**, en una única transacción:
+0. `SELECT pg_advisory_xact_lock(<constante>)`, que serializa las importaciones aunque todavía no exista la fila de `CARTERA_VIGENTE`;
+1. `INSERT` de la nueva `IMPORTACION` y sus `POSICION`;
+2. `INSERT … ON CONFLICT (id) DO UPDATE SET importacion_id = :nueva` en `CARTERA_VIGENTE`;
+3. `DELETE FROM importacion WHERE id <> :nueva`: se borran **todas** las importaciones distintas de la nueva, y sus posiciones caen por `ON DELETE CASCADE`;
+4. `COMMIT`.
 
-Cabeceras sin importar orden ni mayúsculas; importes en USD.
+Cualquier fallo antes del `COMMIT`, o un fichero con errores, deja `CARTERA_VIGENTE` apuntando a la importación anterior, como exige la spec. Sin el bloqueo, dos importaciones simultáneas (por ejemplo, desde dos pestañas) leerían la misma cartera anterior y la segunda dejaría huérfana la importación de la primera, que no sería vigente ni se borraría nunca; con él, la segunda espera a la primera y al terminar queda exactamente una importación. La respuesta `201` se calcula a partir de las posiciones insertadas en la misma transacción. La importación anterior no se conserva como historial: ninguna spec la usa, y la confirmación de sustitución en pantalla es la protección frente a una importación equivocada.
+
+**Qué se guarda y qué se calcula:**
+| Se guarda | Se calcula bajo demanda | En memoria o en código |
+|---|---|---|
+| `CARTERA_VIGENTE`, `IMPORTACION`, `POSICION` | Estado, precio de referencia, días de tenencia, rendimiento, ST/LT, resumen y ganancias por año | Catálogo de estrategias y rangos |
+| `PRECIO_DIARIO`, `COBERTURA_PRECIO` (caché) | Valoración diaria, rentabilidades, TWR y curvas, también del índice | Contadores del rate limiting |
+| — | Indicadores, señales, intensidad, histórico | Umbrales de seguridad e histórico mínimo |
+| — | Backtests, métricas, comparativa, mejoras | — |
+| — | Recomendaciones, stop-loss, objetivo, cantidad sugerida, avisos | — |
+
+No se cachean la TWR ni los backtests: con un solo usuario recalcular es barato, y una caché de resultados exigiría invalidarla con cada importación y con cada precio nuevo. El precio de referencia de las posiciones abiertas es el último cierre diario sin ajustar, con su fecha, tomado de la caché `PRECIO_DIARIO`; no se piden cotizaciones intradía.
+
+**`NUMERIC` frente a float en toda la cadena:**
+- **BD:** `NUMERIC(18,6)`. Los productos (cantidad × precio, hasta 12 decimales) no se guardan: se calculan en `Decimal` y se redondean al serializar.
+- **Entrada desde el XLSX:** openpyxl devuelve los números como `float`, que se convierten con `Decimal(repr(valor))` y nunca con `Decimal(valor)` (0,1 daría 0,1000000000000000055511…). Antes de insertar, una cantidad con más de 6 decimales se rechaza (`422`) y los precios con más de 6 decimales se redondean con `quantize(Decimal('0.000001'), ROUND_HALF_UP)` en la aplicación, para que el valor usado en los cálculos sea el mismo que el guardado.
+- **Entrada desde el proveedor:** el adaptador convierte el float64 de pandas con `Decimal(repr(round(x, 6)))`.
+- **ORM:** SQLAlchemy `Numeric(18, 6, asdecimal=True)`, que devuelve `Decimal`.
+- **Cálculo de series** (TWR, indicadores): conversión explícita a float64 en la frontera de la sección 2.1; los importes que se muestran (rendimiento, P&L, stop-loss, objetivo, capital) se recalculan en `Decimal`.
+- **API:** importes redondeados a 2 decimales y rentabilidades a 6.
+- Se descartan `double precision` (0,1 + 0,2 ≠ 0,3, y los escenarios de rendimiento exacto dejarían de compararse de forma exacta) y los céntimos enteros (no sirven para cantidades fraccionarias).
+
+**Atomicidad de la caché OHLC:**
+- **Descarga normal:** el upsert de las filas de `PRECIO_DIARIO` y la actualización de `COBERTURA_PRECIO` de ese ticker van en la misma transacción, de modo que una cobertura nunca declara fechas que no estén guardadas.
+- **Invalidación por split:** borrar todas las filas del ticker, insertar el histórico normalizado y actualizar `ultimo_split` en una sola transacción, para que ninguna lectura concurrente vea una mezcla de precios ajustados antes y después del split.
+- **Lecturas:** una sola consulta por rango (`ticker = ANY(:t) AND fecha BETWEEN :d AND :h`), que aprovecha la PK.
+- **Bloqueo de descargas:** `pg_advisory_xact_lock(hash(ticker))`, para que dos peticiones simultáneas no descarguen dos veces el mismo ticker.
+
+**Formato del fichero de entrada.** Solo la primera hoja; cabeceras en la fila 1, sin importar el orden ni las mayúsculas; las columnas adicionales (por ejemplo, `Comisión`) se ignoran; las filas totalmente vacías se saltan sin contarlas, y una fila a medias da `422`. Un fichero con las cabeceras y ninguna fila de datos, o con todas las filas vacías, se rechaza con `422`.
+
+| Columna | Obligatoria | Celdas admitidas | Regla |
+|---|---|---|---|
+| `Ticker` | sí | texto | Se convierte a mayúsculas; `^[A-Z.\-]{1,10}$` |
+| `Fecha de compra` | sí | fecha de Excel o texto `AAAA-MM-DD` | No futura; de una celda con hora se toma solo la fecha |
+| `Cantidad` | sí | número o texto con punto decimal | > 0, ≤ 6 decimales (se admiten fracciones de acción) |
+| `Precio de compra` | sí | número o texto con punto decimal | > 0 (USD); con más de 6 decimales se redondea a 6, mitades hacia arriba |
+| `Fecha de venta` | no | igual que la de compra | ≥ fecha de compra; no futura; va junto con el precio de venta |
+| `Precio de venta` | no | igual que el de compra | > 0; igual redondeo; va junto con la fecha de venta |
+
+No se admiten formatos locales como texto (`10/01/2024`, `172,50`). **Límites** (sección 2.5): 5 MB, 10.000 filas, 10 s, sin macros, objetos ni vínculos externos, y fórmulas solo con su valor calculado.
+
+Ejemplo:
 
 | Ticker | Fecha de compra | Cantidad | Precio de compra | Fecha de venta | Precio de venta |
 |---|---|---|---|---|---|
 | AAPL | 2024-03-15 | 10 | 172.50 | | |
 | MSFT | 2024-01-10 | 5 | 380.00 | 2024-12-20 | 435.00 |
 
-`Ticker`, `Fecha de compra`, `Cantidad` y `Precio de compra` son obligatorias; `Fecha de venta` y `Precio de venta` son opcionales y deben ir juntas.
-
 **Fórmulas clave (contrato del dominio)**
-- Rendimiento total: `(precio_ref − precio_compra) × cantidad` USD y `(precio_ref ÷ precio_compra − 1) × 100` %.
-- Long-Term si entre la compra y la venta (o hoy) ha pasado **más de un año** natural: comprada el 2024-01-10, es Short-Term si se vende el 2025-01-10 y Long-Term desde el 2025-01-11. El aniversario de una compra hecha un 29 de febrero es el 28 de febrero: comprada el 2024-02-29, es Long-Term desde el 2025-03-01; comprada el 2023-02-28, es Long-Term desde el 2024-02-29.
-- Flujos en días sin sesión: una compra o una venta fechada en fin de semana o festivo se asigna a la primera sesión posterior con datos, tanto para la aportación o retirada como para empezar o dejar de valorar la posición (compra el sábado 2025-03-08 → aportación del lunes 2025-03-10).
-- Rentabilidad diaria: `r_t = (V_t + S_t − V_{t−1} − B_t) ÷ (V_{t−1} + B_t)`, con `V` el valor al cierre, `B` las compras y `S` las ventas de la sesión; se excluyen sesiones con denominador 0.
-- TWR acumulada: `Π(1 + r_t) − 1`; mensual y semanal: encadenado dentro de cada mes natural (`AAAA-MM`) y semana ISO (`AAAA-Www`).
-- TWR anualizada: `(1 + TWR)^(365 / D) − 1`, solo si `D ≥ 365` días.
-- Intensidad `rsi`: `(sobreventa − RSI) ÷ sobreventa × 100` (Compra), `(RSI − sobrecompra) ÷ (100 − sobrecompra) × 100` (Venta). Intensidad `cruce-medias`: `min(100, |SMA_corta − SMA_larga| ÷ SMA_larga × 1000)`.
-- Capital inicial del backtest: el máximo capital invertido simultáneamente en la cartera real, **medido a coste de compra** (Σ cantidad × precio de compra de las posiciones abiertas a la vez), sin depender de la revalorización; se reparte a partes iguales entre los tickers.
-- Compras recomendadas: stop-loss `precio − 2 × ATR(14)`, objetivo `precio + 3 × ATR(14)`.
-- Histórico mínimo de los indicadores: el periodo en las SMA y `periodo + 100` sesiones en el RSI y el ATR de Wilder (114 para RSI(14) y ATR(14)).
-- Cierre sin ajustar: `cierre_sin_ajustar = cierre × F(fecha)`, donde `F(fecha)` es el producto de las proporciones de los splits posteriores a esa fecha. Ejemplo: split 10:1 el 2024-06-10; el cierre ajustado del 2024-06-07 es 120,00, luego el sin ajustar es 1.200,00. Después del último split las dos series coinciden.
-- Serie que usa cada feature: **cierre sin ajustar** en la Watchlist, el rendimiento y la TWR (F1, F2); **OHLC ajustado por splits** en los indicadores y las señales (F3), el backtest (F4) y el ATR de las recomendaciones (F5).
+- **Rendimiento:** `(P_ref − P_compra) × cantidad` USD y `(P_ref ÷ P_compra − 1) × 100` %, con `P_ref` el último cierre sin ajustar en las abiertas y el precio de venta en las cerradas. Ejemplo: 2,5 × (120 − 100) = 50 USD.
+- **Días de tenencia:** `fecha_fin − fecha_compra`, donde `fecha_fin` es la venta o la fecha actual.
+- **ST/LT:** Long-Term si `fecha_fin > aniversario(fecha_compra)`. El aniversario es el mismo día y mes del año siguiente, o el 28 de febrero si la compra fue un 29 de febrero. Ejemplos: compra 2024-01-10 → Short-Term si se vende el 2025-01-10 y Long-Term desde el 2025-01-11; compra 2024-02-29 → Long-Term desde el 2025-03-01; compra 2023-02-28 → Long-Term desde el 2024-02-29.
+- **Rentabilidad diaria:** `r_t = (V_t + S_t − V_{t−1} − B_t) ÷ (V_{t−1} + B_t)`, con `V_t` la suma de cantidad × cierre sin ajustar de las abiertas al final de t, `B_t` las compras de t a coste y `S_t` las ventas de t. Las compras cuentan como hechas al inicio de la sesión (denominador) y las ventas al final (solo numerador); se excluyen las sesiones con denominador 0.
+- **Flujos en días sin sesión:** una compra o una venta fechada en fin de semana o festivo se asigna a la primera sesión posterior con datos, tanto para la aportación o retirada como para empezar o dejar de valorar la posición (compra el sábado 2025-03-08 → aportación del lunes 2025-03-10).
+- **TWR:** acumulada `Π(1 + r_t) − 1`; mensual (`AAAA-MM`) y semanal ISO (`AAAA-Www`), encadenando dentro de cada periodo; **anualizada según GIPS** `(1 + TWR)^(365 ÷ D) − 1`, solo si D ≥ 365 días naturales, para no extrapolar un periodo corto a un año.
+- **RSI de Wilder (n):** `Δ_t = C_t − C_{t−1}`, `G = max(Δ, 0)`, `L = max(−Δ, 0)`; las medias iniciales son la media simple de los n primeros valores y después `m_t = (m_{t−1} × (n − 1) + x_t) ÷ n`; `RSI = 100 − 100 ÷ (1 + mG ÷ mL)`, sobre cierres ajustados por splits.
+- **ATR de Wilder (n):** `TR_t = max(H − L, |H − C_{t−1}|, |L − C_{t−1}|)`, con el mismo suavizado que el RSI empezando por la media simple de los n primeros TR.
+- **SMA (n):** media simple de los n últimos cierres ajustados.
+- **Histórico mínimo de los indicadores:** el periodo en las SMA y `periodo + 100` sesiones en el RSI y el ATR de Wilder (114 para RSI(14) y ATR(14)).
+- **Intensidad:** `rsi`: Compra `(sobreventa − RSI) ÷ sobreventa × 100` y Venta `(RSI − sobrecompra) ÷ (100 − sobrecompra) × 100`; `cruce-medias`: `min(100, |SMA_c − SMA_l| ÷ SMA_l × 1000)`; Mantener: 0.
+- **Stop-loss y objetivo de las compras:** `P_ref − 2 × ATR(14)` y `P_ref + 3 × ATR(14)`. Ejemplo: 100 y 2 → 96 y 106.
+- **Cierre sin ajustar:** `cierre_sin_ajustar = cierre × F(fecha)`, donde `F(fecha)` es el producto de las proporciones de los splits posteriores a esa fecha. Ejemplo: split 10:1 el 2024-06-10; el cierre ajustado del 2024-06-07 es 120,00, luego el sin ajustar es 1.200,00. Después del último split las dos series coinciden.
+- **Serie que usa cada feature:** **cierre sin ajustar** en la Watchlist, el rendimiento y la TWR (F1, F2); **OHLC ajustado por splits** en los indicadores y las señales (F3), el backtest (F4) y el ATR de las recomendaciones (F5).
+- **Capital inicial del backtest:** el máximo, por fecha, de la suma de cantidad × precio de compra de las posiciones abiertas (a coste, sin depender de la revalorización); se reparte a partes iguales entre los tickers.
 
 
 
@@ -994,6 +1049,11 @@ Y veo en la Watchlist una fila por posición con precio de referencia, rendimien
 Y una posición comprada el 2024-01-10 y vendida el 2025-01-10 se marca Short-Term
 Y una vendida el 2025-01-11 se marca Long-Term
 Y una posición comprada el 2024-02-29 se marca Short-Term si se vendió el 2025-02-28 y Long-Term si se vendió el 2025-03-01
+
+Dado un XLSX con una fila de 2,5 acciones de AAPL compradas a 100 USD
+Y un precio de referencia de 120 USD
+Cuando lo subo
+Entonces la posición se importa con cantidad 2,5 y su rendimiento total es 50 USD
 
 Dado un XLSX con cantidad 0 en la fila 4 y una fecha de venta anterior a la de compra en la fila 7
 Cuando lo subo
