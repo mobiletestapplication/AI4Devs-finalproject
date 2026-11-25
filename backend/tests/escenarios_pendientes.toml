@@ -11,13 +11,6 @@
 
 # --- Entrega 2: flujo principal ------------------------------------------------------
 
-[SEC-01]
-# Rechazos que el middleware resuelve antes del enrutado: no necesitan la ruta.
-escenarios = [
-  "seguridad-api::Host admitido::DNS rebinding",
-  "seguridad-api::Origen de las peticiones que envían datos::Importación desde otra web",
-]
-
 [BE-01a]
 escenarios = [
   "importacion-cartera::Rechazo de ficheros no válidos::Fichero que no es XLSX",
@@ -53,6 +46,12 @@ escenarios = [
   "importacion-cartera::Rendimiento total::*",
   "importacion-cartera::Clasificación de la plusvalía::*",
   "seguridad-api::Límite de frecuencia de las operaciones caras::Consultas sin límite",
+  # Datos del proveedor vistos en GET /api/cartera/posiciones (sec-01-seguridad-api).
+  "seguridad-api::Datos del proveedor de mercado como entrada no confiable::Cierre no positivo",
+  "seguridad-api::Datos del proveedor de mercado como entrada no confiable::Precio no numérico o no finito",
+  "seguridad-api::Datos del proveedor de mercado como entrada no confiable::Máximo menor que el mínimo",
+  "seguridad-api::Datos del proveedor de mercado como entrada no confiable::Fecha posterior a la fecha actual",
+  "seguridad-api::Datos del proveedor de mercado como entrada no confiable::Datos de otro ticker",
 ]
 
 [FE-01]
@@ -60,6 +59,10 @@ escenarios = [
   "importacion-cartera::Carga del fichero en pantalla::*",
   "importacion-cartera::Tabla Watchlist::*",
   "importacion-cartera::Mensajes de error sin eco del contenido::Marcado en una celda",
+  # Comprobación en pantalla antes de enviar (sec-01-seguridad-api).
+  "importacion-cartera::Comprobación del fichero en pantalla antes de enviarlo::Extensión no admitida",
+  "importacion-cartera::Comprobación del fichero en pantalla antes de enviarlo::Fichero de más de 5 MB",
+  "importacion-cartera::Comprobación del fichero en pantalla antes de enviarlo::Rechazo del servidor tras la comprobación en pantalla",
 ]
 
 # --- Entrega 2: backtesting ----------------------------------------------------------
@@ -91,6 +94,9 @@ escenarios = [
   "estrategias-indicador::Histórico mínimo de los indicadores::*",
   "seguridad-api::Host admitido::Host local",
   "seguridad-api::Validación de parámetros con 400::Tipo de parámetro no válido",
+  # Necesitan GET /api/estrategias/rsi/senales (sec-01-seguridad-api).
+  "seguridad-api::Formato común de los errores::Valor de la petición no repetido",
+  "seguridad-api::Datos del proveedor de mercado como entrada no confiable::Mensaje del proveedor con marcado",
 ]
 
 [BE-05]

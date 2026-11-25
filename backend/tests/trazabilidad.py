@@ -325,10 +325,19 @@ def comprobar(
     citas: Citas,
     pendientes: list[Pendiente],
 ) -> Resultado:
-    """Aplica las reglas 1-5 (T4)."""
+    """Aplica las reglas 1-5 (T4).
+
+    Los pendientes pueden coincidir también con escenarios de deltas activos (``citables``),
+    para que un change deje asignados sus escenarios nuevos antes de archivarse
+    (design S8 de sec-01-seguridad-api), pero solo con su identificador exacto: los
+    patrones con ``*`` cubren solo escenarios vivos, para no asignar a otro ticket los
+    escenarios nuevos de un delta. A esos se les aplican las reglas 3 y 5, pero no la 1,
+    porque aún no se exigen.
+    """
     informe = Informe()
     exigidos = set(escenarios)
     conocidos = sorted(citables | exigidos)
+    candidatos = [*escenarios, *sorted(citables - exigidos)]
 
     for identificador, tests in sorted(citas.items()):
         if identificador not in citables and identificador not in exigidos:
@@ -338,13 +347,17 @@ def comprobar(
 
     asignacion: dict[str, list[Pendiente]] = defaultdict(list)
     for pendiente in pendientes:
-        coincidentes = [e for e in escenarios if pendiente.coincide(e)]
+        coincidentes = [
+            e
+            for e in candidatos
+            if pendiente.coincide(e) and (e in exigidos or not pendiente.es_patron)
+        ]
         if not coincidentes:
             informe.anadir(4, f"[{pendiente.ticket}] {pendiente.patron}")
         for identificador in coincidentes:
             asignacion[identificador].append(pendiente)
 
-    for identificador in escenarios:
+    for identificador in candidatos:
         asignados = asignacion.get(identificador, [])
         if len(asignados) > 1:
             tickets = ", ".join(p.ticket for p in asignados)
@@ -361,7 +374,7 @@ def comprobar(
                 f"{identificador}: quítalo de [{pendiente.ticket}], ya lo prueba "
                 f"{', '.join(citas[identificador])}{consejo}",
             )
-        if not asignados and identificador not in citas:
+        if not asignados and identificador not in citas and identificador in exigidos:
             informe.anadir(1, identificador)
 
     pendientes_por_ticket: dict[str, int] = defaultdict(int)

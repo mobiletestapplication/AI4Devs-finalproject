@@ -324,3 +324,50 @@ def test_regla_5_pendiente_en_dos_tickets() -> None:
     resultado = comprobar(ESCENARIOS, set(), {}, pendientes)
 
     assert resultado.informe.errores == {5: ["cartera::Consultar::Sin cartera (en BE-01, FE-01)"]}
+
+
+# --- Pendientes de deltas activos (sec-01-seguridad-api, design S8) --------------------
+
+DELTA_ACTIVO = {"cartera::Exportar::A CSV"}
+TODO_PENDIENTE = Pendiente("BE-01", "cartera::*")
+
+
+def test_pendiente_de_un_delta_activo_es_valido() -> None:
+    pendientes = [TODO_PENDIENTE, Pendiente("FE-01", "cartera::Exportar::A CSV")]
+
+    resultado = comprobar(ESCENARIOS, DELTA_ACTIVO, {}, pendientes)
+
+    assert resultado.informe.correcto
+    assert resultado.pendientes_por_ticket == {"BE-01": 3, "FE-01": 1}
+
+
+def test_pendiente_de_un_delta_activo_con_test_falla_por_la_regla_3() -> None:
+    pendientes = [TODO_PENDIENTE, Pendiente("FE-01", "cartera::Exportar::A CSV")]
+    citas = {"cartera::Exportar::A CSV": ["t1"]}
+
+    resultado = comprobar(ESCENARIOS, DELTA_ACTIVO, citas, pendientes)
+
+    assert list(resultado.informe.errores) == [3]
+
+
+def test_escenario_de_un_delta_activo_sin_pendiente_no_se_exige() -> None:
+    resultado = comprobar(ESCENARIOS, DELTA_ACTIVO, {}, [TODO_PENDIENTE])
+
+    assert resultado.informe.correcto
+
+
+def test_un_patron_no_cubre_escenarios_de_deltas_activos() -> None:
+    citas = {"cartera::Exportar::A CSV": ["t1"]}
+
+    resultado = comprobar(ESCENARIOS, DELTA_ACTIVO, citas, [TODO_PENDIENTE])
+
+    assert resultado.informe.correcto
+    assert resultado.pendientes_por_ticket == {"BE-01": 3}
+
+
+def test_pendiente_fuera_de_specs_y_deltas_sigue_fallando() -> None:
+    pendientes = [TODO_PENDIENTE, Pendiente("FE-01", "cartera::Exportar::A PDF")]
+
+    resultado = comprobar(ESCENARIOS, DELTA_ACTIVO, {}, pendientes)
+
+    assert resultado.informe.errores == {4: ["[FE-01] cartera::Exportar::A PDF"]}

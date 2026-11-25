@@ -11,7 +11,9 @@ from app.infrastructure.db.modelos import Base
 config = context.config
 
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # Sin desactivar los loggers existentes: si Alembic se ejecuta dentro de otro proceso
+    # (tests), silenciaría el registro de seguridad de la aplicación (sec-01-seguridad-api).
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 # Metadatos de los modelos ORM: autogenerate y `alembic check` comparan con ellos.
 target_metadata = Base.metadata

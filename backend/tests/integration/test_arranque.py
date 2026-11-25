@@ -8,7 +8,8 @@ from app.main import crear_app
 @pytest.fixture
 def cliente() -> TestClient:
     ajustes = Ajustes(database_url="postgresql+psycopg://traide@localhost:5432/traide_tests")
-    return TestClient(crear_app(ajustes))
+    # Host admitido (seguridad-api): TestClient envía "testserver" por defecto.
+    return TestClient(crear_app(ajustes), base_url="http://localhost")
 
 
 def test_openapi_bajo_prefijo_api(cliente: TestClient) -> None:

@@ -101,7 +101,7 @@ Cada funcionalidad tiene su especificación viva en `openspec/specs/<capability>
 
 Dashboard de una sola página con secciones (wireframes a generar en la Entrega 2):
 
-1. **Carga y Watchlist (F1)** — sin cartera, mensaje de bienvenida y control para seleccionar o arrastrar el `.xlsx`, con el enlace "Descargar cartera de ejemplo" (también junto al control de carga). Sobre la Watchlist, cabecera de resumen con valor actual, capital invertido y P&L no realizado (también en %) y realizado, en verde con `+` o rojo con `−`; desplegable "Resultado realizado por año" con ganancias, pérdidas y neto para Short-Term y Long-Term; "Datos de mercado a" con la fecha y hora, visible en todas las secciones y resaltada con "Datos desactualizados" si tiene más de 5 días; la cabecera se recalcula tras importar sin recargar. Con cartera, aviso de sustitución antes de importar otro fichero, que solo se importa si se confirma. Durante la carga, indicador de progreso y después mensaje de éxito con el número de posiciones importadas. Si hay errores de validación, lista con número de fila y motivo, y la Watchlist sigue mostrando la cartera anterior. Tabla ordenable por cualquier columna y filtrable (abiertas / cerradas / todas): Ticker, Estado, Cantidad, Precio de compra, Precio de referencia, Rendimiento USD, Rendimiento %, Plusvalía (etiqueta `Short-Term`/`Long-Term`). Rendimientos en verde con `+` o en rojo con `−`; `—` con el motivo al pasar el cursor si no hay cotización.
+1. **Carga y Watchlist (F1)** — sin cartera, mensaje de bienvenida y control para seleccionar o arrastrar el `.xlsx`, con el enlace "Descargar cartera de ejemplo" (también junto al control de carga). Sobre la Watchlist, cabecera de resumen con valor actual, capital invertido y P&L no realizado (también en %) y realizado, en verde con `+` o rojo con `−`; desplegable "Resultado realizado por año" con ganancias, pérdidas y neto para Short-Term y Long-Term; "Datos de mercado a" con la fecha y hora, visible en todas las secciones y resaltada con "Datos desactualizados" si tiene más de 5 días; la cabecera se recalcula tras importar sin recargar. Antes de enviar, la pantalla comprueba que el fichero es `.xlsx` y no supera 5 MB y, si no, muestra el motivo sin enviarlo (el servidor sigue validando el contenido). Con cartera, aviso de sustitución antes de importar otro fichero, que solo se importa si se confirma. Durante la carga, indicador de progreso y después mensaje de éxito con el número de posiciones importadas. Si hay errores de validación, lista con número de fila y motivo, y la Watchlist sigue mostrando la cartera anterior. Tabla ordenable por cualquier columna y filtrable (abiertas / cerradas / todas): Ticker, Estado, Cantidad, Precio de compra, Precio de referencia, Rendimiento USD, Rendimiento %, Plusvalía (etiqueta `Short-Term`/`Long-Term`). Rendimientos en verde con `+` o en rojo con `−`; `—` con el motivo al pasar el cursor si no hay cotización.
 2. **Rentabilidad (F2)** — TWR acumulada y anualizada (o "No aplicable (periodo inferior a un año)") en porcentaje con dos decimales, con las fechas de inicio y fin y una ayuda sobre qué mide la TWR; junto a la TWR de la cartera, la del índice ("SPY: 10,00 %") y la diferencia ("+11,00 pp" en verde o con `−` en rojo); gráfico de líneas con la curva base 100 de la cartera y la del índice; selector Mensual/Semanal con gráfico de barras (verde/rojo, marca en periodos parciales) y tabla con las columnas del índice y de la diferencia. Si no hay datos del índice, "Índice de referencia no disponible" en lugar de sus valores. Tras importar una nueva cartera, el panel se recalcula sin recargar la página.
 3. **Estrategias (F3)** — selector de estrategia con sus parámetros y descripción de reglas (un valor no válido muestra un error junto al campo y no se recalculan las señales hasta corregirlo); tabla de señales por ticker (Compra verde, Venta roja, Mantener gris, "Sin datos suficientes" atenuada) con intensidad, valor del indicador y fecha desde la que se mantiene; al pulsar un ticker, gráfico del precio del último año con el indicador en un panel inferior, junto con los umbrales o las medias de la estrategia, y marcas de Compra y Venta en los cambios de señal.
 4. **Backtesting (F4)** — botón "Ejecutar backtest" con indicador de progreso, deshabilitado hasta que termina el cálculo; tabla comparativa (cartera real, cada estrategia y cada línea base, estas con la etiqueta "Línea base") con TWR acumulada y anualizada, máximo drawdown, % de aciertos y factor de beneficio, más volatilidad y exposición en % con dos decimales, Sharpe y Calmar con dos decimales y número de operaciones, `—` con el motivo al pasar el cursor si un valor no está disponible y una ayuda por métrica; ordenada según el selector de criterio (TWR, Sharpe, Calmar o drawdown), que reordena la tabla y la fila destacada sin cambiar las curvas; aviso fijo de sesgo de selección que, al desplegarlo, lista los tickers comprados después del inicio de la simulación con sus dos fechas; curvas base 100 superpuestas, también de las líneas base con trazo discontinuo, que se pueden ocultar desde la leyenda; propuestas de mejora en lenguaje claro y operaciones simuladas de la estrategia elegida. Si fallan los datos de mercado, mensaje que explica el problema con la opción de reintentar; si se supera el límite de backtests por minuto (`429`), mensaje con los segundos que hay que esperar antes de reintentar.
@@ -487,7 +487,7 @@ El vector de ataque principal es la **subida de un fichero XLSX**, y la aplicaci
 | 7 | Path traversal | A01 | El nombre del fichero se ignora; procesamiento en memoria; solo se guarda el SHA-256; nginx no lista directorios; el endpoint de ejemplo no recibe ninguna entrada (sin rutas variables ni nombres de fichero del cliente), sirve un fichero fijo como adjunto (`Content-Disposition: attachment`) con `X-Content-Type-Options: nosniff`, y ese fichero, sin fórmulas, macros ni vínculos, pasa en CI por la misma validación que una subida | — |
 | 8 | Petición desde otra web (CSRF) | A01 | `Origin` / `Sec-Fetch-Site` en los `POST`. Además, mismo origen vía nginx (la SPA y `/api` se sirven desde `localhost:8080`), así que CORS no hace falta y se mantiene restringido solo como defensa en profundidad | `403` |
 | 9 | DNS rebinding | A01 · A02 | Lista de hosts admitidos: `localhost` y `127.0.0.1` | `400` |
-| 10 | Abuso de operaciones caras | A06 | slowapi: 5 importaciones y 10 backtests por minuto, con `Retry-After`; las consultas no se limitan | `429` |
+| 10 | Abuso de operaciones caras | A06 | Middleware con `limits` (la librería de ventanas de slowapi) que actúa antes del enrutado y sin leer el cuerpo: 5 importaciones y 10 backtests por minuto, con `Retry-After`; las consultas no se limitan | `429` |
 | 11 | `422` por defecto de FastAPI | A10 | Manejador de validación que responde `400` en parámetros de ruta, de consulta y cuerpo JSON | `400` |
 | 12 | Fugas en los errores | A10 · A02 | `application/problem+json` con identificador de incidencia; la traza solo en el log; la importación falla cerrada (sin tocar la cartera) | `500` |
 | 13 | Secretos | A04 · A02 | Sin secretos en el repositorio; `.env.example` sin valores secretos; gitleaks en pre-commit y CI; secretos nunca en logs | — (CI) |
@@ -495,8 +495,12 @@ El vector de ataque principal es la **subida de un fichero XLSX**, y la aplicaci
 | 15 | Prompt injection (S1) | A05 · A06 | El prompt solo recibe datos ya validados (ticker con el patrón, números, código de señal y umbrales), nunca texto libre del XLSX; prompt de sistema fijo y sin herramientas; salida validada con esquema JSON y longitud máxima, mostrada como texto; el LLM no cambia el orden, las cantidades ni los niveles; si falla o tarda más de 5 s, la operación se devuelve sin justificación | `200` sin justificación |
 | 16 | Sin autenticación | A07 | Aceptado: un usuario, solo ejecución local con los puertos publicados en `127.0.0.1`; desplegar en público exige añadir antes la autenticación | — |
 | 17 | Registro de ataques | A09 | Una línea de log estructurado por intento de importación: marca de tiempo, SHA-256 (si se llegó a leer), tamaño, resultado y código, motivo con el número de fila pero sin el valor de la celda, e identificador de incidencia en los `500`; el nombre original del fichero no se registra | — |
+| 18 | Datos de terceros manipulados o corruptos (proveedor de mercado) | A08 · A05 | Validador del dominio antes de guardar o usar cualquier barra: precios numéricos, finitos, > 0 y < 10¹², máximo ≥ mínimo, fecha no futura ni repetida y mismo ticker que el pedido; cada descarte se registra con ticker, fecha y motivo, sin los valores; el texto del proveedor nunca llega a las respuestas | barra descartada · `503` sin texto del proveedor |
+| 19 | Eco de la petición en los errores | A05 · A10 | Todos los `4xx` y `5xx` en `application/problem+json` con textos de la aplicación; los motivos de validación salen de una tabla propia, nunca del valor recibido; un nombre de campo que no es un identificador simple se muestra como "(no reconocido)" | `400` · `403` · `404` · `429` · `500` |
+| 20 | API sin cabeceras fuera de nginx (modo desarrollo) | A02 | La API añade `nosniff`, `Referrer-Policy: no-referrer`, `X-Frame-Options: DENY` y `Cache-Control: no-store` a todas sus respuestas, y `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'` a las JSON; `/api/docs` va sin CSP porque Swagger UI carga sus recursos de jsDelivr (solo en `127.0.0.1`) | — |
+| 21 | Subidas que el servidor va a rechazar | A06 | La pantalla comprueba la extensión `.xlsx` y el máximo de 5 MB antes de enviar; el servidor sigue decidiendo por el contenido (un CSV renombrado pasa la pantalla y recibe `415`) | — (en pantalla) |
 
-Cabeceras de seguridad en nginx: CSP, `X-Content-Type-Options: nosniff` y `Referrer-Policy`. La API no arranca si openpyxl no usa defusedxml, si la lista de hosts admitidos está vacía o si `LLM_API_KEY` aparece en algún valor que se vaya a registrar.
+Cabeceras de seguridad: nginx aplica a la SPA CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy` y `X-Frame-Options`, y la propia API añade las suyas (fila 20). El log de la API es JSON, con el identificador de incidencia de los `500`, y oculta con `***` la contraseña de la BD y `LLM_API_KEY`. La API no arranca si openpyxl no usa defusedxml o si la lista de hosts admitidos está vacía.
 
 **Orden de validación de la subida.** Cada paso es más caro que el anterior: lo que no requiere descomprimir (tamaño, firma, índice ZIP) va antes de abrir ningún XML, y el XML se examina en busca de `<!DOCTYPE` antes de pasarlo a openpyxl.
 
@@ -632,7 +636,7 @@ Traza, vídeo y capturas se guardan como artefactos del CI cuando falla.
 | Ticker de 500 caracteres | `422`; el error incluye solo 20 caracteres y `…` |
 | Ticker `<img src=x onerror=alert(1)>` | `422`; el E2E comprueba que se ve como texto literal y no se ejecuta ningún `alert` |
 
-**Seguridad: API** (escenarios de `seguridad-api`): `Host: atacante.example:8080` → `400`; `Origin: https://atacante.example` en la importación → `403`; `POST /api/backtests` sin `Origin` ni `Sec-Fetch-Site` → aceptado; sexta importación en un minuto → `429` con `Retry-After`; 100 `GET /api/cartera/posiciones` en un minuto → ningún `429`; periodo `abc` → `400`; campo `comision` en el backtest → `400`; excepción forzada en la TWR → `500` en `problem+json` con identificador de incidencia y sin traza.
+**Seguridad: API** (escenarios de `seguridad-api`; los de SEC-01 se prueban con rutas de prueba registradas solo en el test): `GET /api/no-existe` → `404` en `problem+json` con las cabeceras de seguridad; parámetro `<script>` → `400` sin repetir el valor; la sexta petición a una ruta limitada → `429` sin llegar a la ruta; `Host` ajeno con `Origin` ajeno → `400` (el `Host` se comprueba antes); barras del proveedor con cierre −5, `NaN`, máximo < mínimo, fecha futura, repetida o de otro ticker → descartadas (validador del dominio, cobertura del 100 %); `Host: atacante.example:8080` → `400`; `Origin: https://atacante.example` en la importación → `403`; `POST /api/backtests` sin `Origin` ni `Sec-Fetch-Site` → aceptado; sexta importación en un minuto → `429` con `Retry-After`; 100 `GET /api/cartera/posiciones` en un minuto → ningún `429`; periodo `abc` → `400`; campo `comision` en el backtest → `400`; excepción forzada en la TWR → `500` en `problem+json` con identificador de incidencia y sin traza.
 
 **LLM (S1, si se implementa):** respuestas simuladas para tests deterministas; validación de estructura y campos obligatorios en salidas reales.
 
@@ -853,9 +857,23 @@ Códigos comunes:
 
 Códigos de seguridad, en todos los endpoints (spec `seguridad-api`):
 - **`400 Bad Request`** si la cabecera `Host`, sin el puerto, no es `localhost` ni `127.0.0.1` (DNS rebinding).
-- **`403 Forbidden`** en los `POST` cuyo `Origin` no es el de la aplicación, o que no tienen `Origin` y llegan con `Sec-Fetch-Site` `cross-site` o `same-site`. Sin ninguna de las dos cabeceras (curl, tests) la petición se acepta.
+- **`403 Forbidden`** en los `POST` (y en `PUT`, `PATCH` y `DELETE`, si llegan a existir) cuyo `Origin` no es el de la aplicación, o que no tienen `Origin` y llegan con `Sec-Fetch-Site` `cross-site` o `same-site`. Sin ninguna de las dos cabeceras (curl, tests) la petición se acepta.
 - **`429 Too Many Requests`** con `Retry-After` en segundos al superar 5 peticiones por minuto a `POST /cartera/importacion` o 10 por minuto a `POST /backtests`; el resto de endpoints no se limita.
 - **`500 Internal Server Error`** ante cualquier error no previsto, con un cuerpo `application/problem+json` con tipo, título e identificador de incidencia, sin trazas, rutas, consultas SQL ni configuración.
+
+**Formato común de los errores** (RFC 9457): todos los `4xx` y `5xx` responden `application/problem+json` con `type` (`urn:traide:error:<código>`), `title`, `status` y, si aplica, `detail`, `errores`, `incidencia` o `reintentar_en`. Los textos los genera la aplicación y nunca repiten valores de la petición ni texto del proveedor de mercado. Todas las respuestas llevan las cabeceras de seguridad de la fila 20 de la sección 2.5. Ejemplos:
+
+```json
+{"type": "urn:traide:error:peticion-no-valida", "title": "Petición no válida", "status": 400,
+ "detail": "Parámetros no válidos: periodo",
+ "errores": [{"ubicacion": "consulta", "campo": "periodo", "motivo": "debe ser un número entero"}]}
+```
+
+```json
+{"type": "urn:traide:error:demasiadas-peticiones", "title": "Demasiadas peticiones", "status": 429,
+ "detail": "Has superado el límite. Vuelve a intentarlo en 42 s.", "reintentar_en": 42}
+```
+El `429` lleva además la cabecera `Retry-After: 42`.
 
 Códigos específicos de un endpoint:
 - `POST /cartera/importacion`, siempre sin modificar la cartera existente:
@@ -1171,13 +1189,23 @@ components:
   schemas:
     Problema:
       type: object
-      description: application/problem+json (RFC 9457), usado en 500 y 503
+      description: application/problem+json (RFC 9457), usado en todos los 4xx y 5xx
       properties:
-        type: { type: string, example: "about:blank" }
+        type: { type: string, example: "urn:traide:error:error-interno" }
         title: { type: string, example: "Error interno" }
         status: { type: integer, example: 500 }
         detail: { type: string, nullable: true }
-        incidencia: { type: string, description: "Identificador de incidencia (en los 500)", example: "8f3c1a2e" }
+        incidencia: { type: string, description: "Identificador de incidencia (en los 500)", example: "8f3c1a2e9b7d4c6a8e2f1b3d5c7a9e0f" }
+        reintentar_en: { type: integer, description: "Segundos hasta poder reintentar (en los 429)" }
+        errores:
+          type: array
+          description: Errores de validación (en los 400), sin los valores recibidos
+          items:
+            type: object
+            properties:
+              ubicacion: { type: string, example: consulta }
+              campo: { type: string, example: periodo }
+              motivo: { type: string, example: debe ser un número entero }
     Metricas:
       type: object
       description: Las métricas de posiciones cerradas son null si no hay ninguna; las de riesgo son null con su motivo en motivos
@@ -1414,7 +1442,7 @@ Cada ticket añade solo su DoD específica.
 |---|---|---|---|---|---|---|
 | OPS-01 | DevOps | Repositorio, uv, compose (`db`, `migrate`, `api`, `web`), nginx, CI y `.env.example`, con los hosts y orígenes admitidos configurables por entorno | todas | 5 | — | 2 |
 | DB-01 | BD | Esquema completo y migraciones (ticket 1) | HU-1..5 | 5 | OPS-01 | 2 |
-| SEC-01 | Backend | `Host`, `Origin`, rate limiting con slowapi, `400` de validación y `500` en `problem+json` | todas | 3 | OPS-01 | 2 |
+| SEC-01 | Backend | `Host`, `Origin`, rate limiting con `limits` antes del enrutado, errores en `problem+json` sin eco, cabeceras en la API, log sin secretos y validador de los datos del proveedor de mercado | todas | 3 | OPS-01 | 2 |
 | BE-01a | Backend | Validación segura del contenedor (streaming ≤ 5 MB, firma y OLE, índice ZIP, content types, contenido activo y `<!DOCTYPE`, defusedxml al arrancar) y generador de fixtures maliciosos | HU-1 | 5 | DB-01 | 2 |
 | BE-01b | Backend | Parseo, validación y sustitución (ticket 2) | HU-1 | 5 | DB-01, BE-01a, SEC-01 | 2 |
 | BE-02 | Backend | Proveedores yfinance y de ficheros con eventos de split, errores clasificados y reintentos; normalización pura a dos series; rango con calentamiento, calendario, cobertura, barra del día, invalidación por split sin lecturas mezcladas y caché desactualizada | HU-1..5 | 8 | DB-01 | 2 |
