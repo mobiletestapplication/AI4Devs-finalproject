@@ -72,16 +72,16 @@ Cada funcionalidad tiene su especificación viva en `openspec/specs/<capability>
 
 | ID | Funcionalidad | Spec | Descripción |
 |---|---|---|---|
-| F1 | Importación y Watchlist con ST/LT | `importacion-cartera` | Carga de un XLSX de posiciones abiertas y cerradas en USD, validación completa (se rechaza el fichero entero si hay errores) y sustitución de la cartera única. Watchlist con precio de referencia (último cierre diario sin ajustar, con su fecha, si está abierta; precio de venta si está cerrada), rendimiento total en USD y % y clasificación **Short-Term** (tenencia ≤ 1 año) o **Long-Term** (> 1 año). |
+| F1 | Importación y Watchlist con ST/LT | `importacion-cartera` | Carga de un XLSX de posiciones abiertas y cerradas en USD, validación completa (se rechaza el fichero entero si hay errores) y sustitución de la cartera única. Watchlist con precio de referencia (último cierre diario sin ajustar, con su fecha, si está abierta; precio de venta si está cerrada), rendimiento total en USD y % y clasificación **Short-Term** (tenencia ≤ 1 año) o **Long-Term** (> 1 año). Sobre la Watchlist, un **resumen de la cartera** (valor actual, capital invertido, P&L no realizado en USD y %, P&L realizado y número de posiciones abiertas y cerradas), las **ganancias realizadas por año fiscal** (año natural de venta, separadas en Short-Term y Long-Term) y la **fecha de los datos de mercado**, con aviso si tienen más de 5 días. Incluye una **cartera de ejemplo descargable** (S3). |
 | F2 | TWR | `rentabilidad-twr` | Valoración diaria de la cartera al cierre de cada sesión, en la que las posiciones abiertas aportan su ganancia o pérdida no realizada hasta la última sesión con cierre disponible, y cálculo de la **Time-Weighted Rate of Return** tratando cada compra como aportación y cada venta como retirada; un flujo fechado en un día sin sesión cuenta en la primera sesión posterior. Salida: TWR acumulada, anualizada (no aplicable si el periodo < 365 días), mensual y por semana ISO, junto con la TWR del **índice de referencia** (SPY por defecto) calculada solo en las mismas sesiones incluidas, la diferencia en puntos porcentuales y una curva de valor base 100 de la cartera y del índice. Si faltan los datos del índice, la TWR de la cartera se devuelve igualmente, sin la referencia y con el motivo. |
 | F3 | Estrategias por indicador | `estrategias-indicador` | Catálogo de estrategias de un único indicador sobre cierres diarios: **`rsi`** (RSI de Wilder 14, sobreventa 30, sobrecompra 70) y **`cruce-medias`** (SMA 50 / SMA 200). Para cada ticker con posición abierta, cada una emite Compra, Venta o Mantener con una intensidad 0-100 (o "Sin datos suficientes" con intensidad 0 si el histórico no alcanza el mínimo: el periodo en las SMA y el periodo + 100 sesiones en el RSI, por ejemplo 114 sesiones para RSI(14)), con el valor del indicador, la fecha de la sesión usada y la fecha desde la que se mantiene la señal. También ofrece el histórico diario de cierre, indicador y señal de un ticker (por defecto, el último año) con las fechas de cambio de señal. La estrategia y sus parámetros elegidos se comparten con el resto del dashboard. |
 | F4 | Backtesting | `backtesting` | Simula la estrategia seleccionada con sus parámetros y el resto del catálogo con sus parámetros por defecto sobre los tickers de la cartera desde la primera compra real, con el máximo capital invertido simultáneamente, medido a coste de compra, repartido a partes iguales, solo largos, sin comisiones ni deslizamiento y ejecutando a la apertura de la sesión siguiente. Métricas, también para la cartera real con las posiciones abiertas valoradas al último cierre disponible: TWR acumulada y anualizada, máximo drawdown, % de aciertos, ganancia y pérdida media, factor de beneficio y duración media, y de riesgo: volatilidad anualizada, ratio de Sharpe (tasa libre de riesgo 0), ratio de Calmar, exposición y número de operaciones (compras y ventas), también para las líneas base. La comparativa se ordena por TWR por defecto o, a elección, por Sharpe, Calmar o máximo drawdown, y la respuesta avisa del **sesgo de selección** (tickers elegidos a posteriori, con los que se compraron después del inicio de la simulación). Incluye dos **líneas base** que no son estrategias del catálogo: `buy-hold` (comprar y mantener los mismos tickers con el mismo capital y reparto) y el índice de referencia con todo el capital. Compara la cartera real, las estrategias y las líneas base, y propone tres tipos de mejora: estrategias o `buy-hold` que superan a la cartera real (en pp, indicando si una estrategia queda por debajo de `buy-hold`; el índice no genera propuestas), ventas con ganancia como Short-Term en los 30 días anteriores a pasar a Long-Term, y compras reales hechas mientras la estrategia seleccionada emitía Venta, con su resultado agregado. |
 | F5 | Hasta 10 operaciones recomendadas | `operaciones-recomendadas` | Operaciones Comprar/Vender sobre los tickers con posición abierta, derivadas de las señales de la estrategia seleccionada (se excluyen las señales Mantener y "Sin datos suficientes", y las Compra de tickers sin histórico suficiente para el ATR(14), es decir, con menos de 114 sesiones), ordenadas por intensidad (empate: ticker alfabético), una por ticker. Cada una indica el precio de referencia (último cierre disponible), el motivo con el valor del indicador y los umbrales o medias de la estrategia, y la fecha de la sesión usada. Las compras incluyen stop-loss (precio − 2 × ATR 14) y objetivo (precio + 3 × ATR 14); las ventas incluyen la cantidad abierta y un aviso fiscal si una posición con ganancia está a ≤ 30 días de pasar a Long-Term. Las compras incluyen además la **cantidad sugerida por riesgo** (entero de acciones tal que, si salta el stop-loss, la pérdida no supere el 1 % del valor de la cartera por defecto, ajustable entre 0,1 % y 5 %), con el capital necesario y su peso en la cartera, y un **aviso de wash sale** si el ticker se vendió con pérdida en los 30 días anteriores. Cada operación indica la **antigüedad de su señal** en sesiones ("Nueva" si son 5 o menos), y un filtro opcional excluye las señales más antiguas antes de elegir las 10. |
 
-**Should-have (opcional, sin spec todavía; se añadirán como *change* de OpenSpec si se abordan)**
+**Should-have (opcional; S1 y S2 sin spec todavía, se añadirán como *change* de OpenSpec si se abordan)**
 - S1: Justificación en lenguaje natural de cada recomendación generada por LLM con salida estructurada (JSON validado), sin influir en el orden de las recomendaciones.
 - S2: Exportación del informe a PDF/CSV.
-- S3: Plantilla XLSX descargable con las columnas del fichero de posiciones.
+- S3 (ya especificada en `importacion-cartera`): cartera de ejemplo descargable, `cartera-ejemplo.xlsx`, con al menos 8 posiciones válidas de 4 tickers (abiertas y cerradas, Short-Term y Long-Term, ganancias y pérdidas); sirve también de plantilla, así que no hay una plantilla vacía aparte.
 
 **Flujo principal (núcleo del MVP):** subir XLSX → validar y persistir en PostgreSQL → mostrar la Watchlist con rendimiento y ST/LT (F1). Recorre frontend, backend y base de datos, y es el que se entregará operativo en la Entrega 2. F2-F5 se construyen encima de las mismas posiciones y de los precios de mercado cacheados.
 
@@ -101,7 +101,7 @@ Cada funcionalidad tiene su especificación viva en `openspec/specs/<capability>
 
 Dashboard de una sola página con secciones (wireframes a generar en la Entrega 2):
 
-1. **Carga y Watchlist (F1)** — sin cartera, mensaje de bienvenida y control para seleccionar o arrastrar el `.xlsx`. Con cartera, aviso de sustitución antes de importar otro fichero, que solo se importa si se confirma. Durante la carga, indicador de progreso y después mensaje de éxito con el número de posiciones importadas. Si hay errores de validación, lista con número de fila y motivo, y la Watchlist sigue mostrando la cartera anterior. Tabla ordenable por cualquier columna y filtrable (abiertas / cerradas / todas): Ticker, Estado, Cantidad, Precio de compra, Precio de referencia, Rendimiento USD, Rendimiento %, Plusvalía (etiqueta `Short-Term`/`Long-Term`). Rendimientos en verde con `+` o en rojo con `−`; `—` con el motivo al pasar el cursor si no hay cotización.
+1. **Carga y Watchlist (F1)** — sin cartera, mensaje de bienvenida y control para seleccionar o arrastrar el `.xlsx`, con el enlace "Descargar cartera de ejemplo" (también junto al control de carga). Sobre la Watchlist, cabecera de resumen con valor actual, capital invertido y P&L no realizado (también en %) y realizado, en verde con `+` o rojo con `−`; desplegable "Resultado realizado por año" con ganancias, pérdidas y neto para Short-Term y Long-Term; "Datos de mercado a" con la fecha y hora, visible en todas las secciones y resaltada con "Datos desactualizados" si tiene más de 5 días; la cabecera se recalcula tras importar sin recargar. Con cartera, aviso de sustitución antes de importar otro fichero, que solo se importa si se confirma. Durante la carga, indicador de progreso y después mensaje de éxito con el número de posiciones importadas. Si hay errores de validación, lista con número de fila y motivo, y la Watchlist sigue mostrando la cartera anterior. Tabla ordenable por cualquier columna y filtrable (abiertas / cerradas / todas): Ticker, Estado, Cantidad, Precio de compra, Precio de referencia, Rendimiento USD, Rendimiento %, Plusvalía (etiqueta `Short-Term`/`Long-Term`). Rendimientos en verde con `+` o en rojo con `−`; `—` con el motivo al pasar el cursor si no hay cotización.
 2. **Rentabilidad (F2)** — TWR acumulada y anualizada (o "No aplicable (periodo inferior a un año)") en porcentaje con dos decimales, con las fechas de inicio y fin y una ayuda sobre qué mide la TWR; junto a la TWR de la cartera, la del índice ("SPY: 10,00 %") y la diferencia ("+11,00 pp" en verde o con `−` en rojo); gráfico de líneas con la curva base 100 de la cartera y la del índice; selector Mensual/Semanal con gráfico de barras (verde/rojo, marca en periodos parciales) y tabla con las columnas del índice y de la diferencia. Si no hay datos del índice, "Índice de referencia no disponible" en lugar de sus valores. Tras importar una nueva cartera, el panel se recalcula sin recargar la página.
 3. **Estrategias (F3)** — selector de estrategia con sus parámetros y descripción de reglas (un valor no válido muestra un error junto al campo y no se recalculan las señales hasta corregirlo); tabla de señales por ticker (Compra verde, Venta roja, Mantener gris, "Sin datos suficientes" atenuada) con intensidad, valor del indicador y fecha desde la que se mantiene; al pulsar un ticker, gráfico del precio del último año con el indicador en un panel inferior, junto con los umbrales o las medias de la estrategia, y marcas de Compra y Venta en los cambios de señal.
 4. **Backtesting (F4)** — botón "Ejecutar backtest" con indicador de progreso, deshabilitado hasta que termina el cálculo; tabla comparativa (cartera real, cada estrategia y cada línea base, estas con la etiqueta "Línea base") con TWR acumulada y anualizada, máximo drawdown, % de aciertos y factor de beneficio, más volatilidad y exposición en % con dos decimales, Sharpe y Calmar con dos decimales y número de operaciones, `—` con el motivo al pasar el cursor si un valor no está disponible y una ayuda por métrica; ordenada según el selector de criterio (TWR, Sharpe, Calmar o drawdown), que reordena la tabla y la fila destacada sin cambiar las curvas; aviso fijo de sesgo de selección que, al desplegarlo, lista los tickers comprados después del inicio de la simulación con sus dos fechas; curvas base 100 superpuestas, también de las líneas base con trazo discontinuo, que se pueden ocultar desde la leyenda; propuestas de mejora en lenguaje claro y operaciones simuladas de la estrategia elegida. Si fallan los datos de mercado, mensaje que explica el problema con la opción de reintentar; si se supera el límite de backtests por minuto (`429`), mensaje con los segundos que hay que esperar antes de reintentar.
@@ -238,7 +238,7 @@ flowchart LR
 | API REST | FastAPI · Pydantic v2 · Uvicorn | Validación, OpenAPI y traducción centralizada de errores, con `application/problem+json` y `Retry-After` |
 | Casos de uso | Python | Un caso de uso por operación; orquestan dominio y puertos; transacción de la importación |
 | Servicio de datos de mercado | Python · pandas | Precios de los tickers de la cartera y, en una llamada separada, del índice de referencia (`BENCHMARK_TICKER`); rango con calentamiento, calendario, cobertura y refresco, barra del día, invalidación por split, normalización a dos series y caché desactualizada |
-| Dominio · posiciones | Python · `Decimal` | Precio de referencia, rendimiento, días de tenencia y ST/LT |
+| Dominio · posiciones | Python · `Decimal` | Precio de referencia, rendimiento, días de tenencia y ST/LT; resumen de la cartera y ganancias por año fiscal como agregación pura que reutiliza el cálculo de posiciones, para que resumen y Watchlist no se contradigan |
 | Dominio · TWR | pandas (float64) | Valoración diaria sin ajustar, rentabilidad con flujos, TWR acumulada, anualizada, mensual y semanal, curva base 100; TWR del índice en las mismas sesiones y diferencia en pp; sin datos del índice, campos vacíos con motivo en lugar de error |
 | Dominio · indicadores | Python, sobre el puerto `IndicadoresTecnicos` | Histórico mínimo, "Sin datos suficientes" y alineación de series |
 | Dominio · estrategias | Python | Catálogo, validación de parámetros, reglas, intensidad y fecha de inicio de la señal |
@@ -426,7 +426,7 @@ flowchart LR
 |---|---|
 | `openspec` | `openspec validate --changes --strict` y validación de las specs vivas |
 | `backend-calidad` | `uv sync --frozen`, `uv run ruff check`, `uv run mypy`, `uv run lint-imports` (import-linter) y el script de trazabilidad escenario → test (`tests/trazabilidad.py`, sección 2.6) |
-| `backend-tests` | `uv run pytest`: unit, contract (proveedor de ficheros y TA-Lib) e integración con Testcontainers; cobertura de líneas ≥ 95 % en `domain/` y ≥ 85 % en el resto; sin tests marcados `red` |
+| `backend-tests` | `uv run pytest`: unit, contract (proveedor de ficheros y TA-Lib) e integración con Testcontainers; cobertura de líneas ≥ 95 % en `domain/` y ≥ 85 % en el resto; sin tests marcados `red`; incluye el test que importa `app/recursos/cartera-ejemplo.xlsx` y espera `201`, de modo que un cambio en las reglas de validación que rompa el ejemplo falla en CI |
 | `frontend` | eslint, `tsc`, vitest, build y comprobación de que los tipos generados desde el OpenAPI están al día |
 | `seguridad` | pip-audit (sobre `uv export`), `npm audit --audit-level=high`, gitleaks, bandit |
 | `e2e` | compose de tests con `PROVEEDOR_PRECIOS=ficheros` y `FECHA_ACTUAL_FIJA` (variable que solo existe en ese compose), y Playwright; depende de los tres jobs de código |
@@ -460,7 +460,7 @@ El vector de ataque principal es la **subida de un fichero XLSX**, y la aplicaci
 | 4 | XXE y entidades XML | A05 · A02 | defusedxml, comprobado al arrancar; cualquier `<!DOCTYPE` → rechazo | `415` |
 | 5 | Inyección de fórmulas | A05 | `data_only=True`; ticker con el patrón `^[A-Z.\-]{1,10}$` tras normalizarlo a mayúsculas; precios > 0; una futura exportación CSV (S2) antepone `'` a `= + - @` | `422` |
 | 6 | XSS reflejado desde el contenido | A05 | Los errores repiten como mucho 20 caracteres de una celda, seguidos de `…`, y siempre como texto, nunca HTML; React sin `dangerouslySetInnerHTML`; CSP en nginx | — |
-| 7 | Path traversal | A01 | El nombre del fichero se ignora; procesamiento en memoria; solo se guarda el SHA-256; sin parámetros de ruta en el endpoint de ejemplo; nginx no lista directorios | — |
+| 7 | Path traversal | A01 | El nombre del fichero se ignora; procesamiento en memoria; solo se guarda el SHA-256; nginx no lista directorios; el endpoint de ejemplo no recibe ninguna entrada (sin rutas variables ni nombres de fichero del cliente), sirve un fichero fijo como adjunto (`Content-Disposition: attachment`) con `X-Content-Type-Options: nosniff`, y ese fichero, sin fórmulas, macros ni vínculos, pasa en CI por la misma validación que una subida | — |
 | 8 | Petición desde otra web (CSRF) | A01 | `Origin` / `Sec-Fetch-Site` en los `POST`. Además, mismo origen vía nginx (la SPA y `/api` se sirven desde `localhost:8080`), así que CORS no hace falta y se mantiene restringido solo como defensa en profundidad | `403` |
 | 9 | DNS rebinding | A01 · A02 | Lista de hosts admitidos: `localhost` y `127.0.0.1` | `400` |
 | 10 | Abuso de operaciones caras | A06 | slowapi: 5 importaciones y 10 backtests por minuto, con `Retry-After`; las consultas no se limitan | `429` |
@@ -538,6 +538,7 @@ El script `tests/trazabilidad.py` lee `openspec/specs/**/spec.md` y la lista de 
 
 **Unitarios (dominio)**, con los ejemplos de cada escenario y además:
 - **ST/LT:** venta en el aniversario de la compra → Short-Term y al día siguiente → Long-Term; compra el 2024-02-29 → Short-Term si se vende el 2025-02-28 y Long-Term el 2025-03-01; compra el 2023-02-28 → Short-Term el 2024-02-28 y Long-Term el 2024-02-29.
+- **Resumen y año fiscal:** valor 2.100, invertido 2.000, no realizado +100 (+5 %) y realizado +50 USD; con una `XYZ` sin precio, los importes no cambian y se indican 3 abiertas y "1 posición sin precio"; 2024 con ST neto +200 y LT neto +500; venta del 2025-01-05 → año 2025, Short-Term; sin cerradas → lista vacía; datos de 3 días → al día y de 7 días → desactualizados.
 - **Rendimiento:** ganancia no realizada en abiertas y pérdida realizada en cerradas; 2,5 acciones compradas a 100 USD con referencia 120 USD → 50 USD.
 - **Formato del XLSX** (escenarios de `importacion-cartera`): `2024-01-10` como texto → se importa; `10/01/2024` → `422` con el formato `AAAA-MM-DD`; `172,50` como texto → `422` por la coma decimal; celda de fecha con hora 2024-12-20 15:30 → 2024-12-20; cantidad 0,1234567 → `422` por más de 6 decimales; precio 172,1234565 → 172,123457 y 172,5 sin cambios; columna `Comisión` → ignorada; filas 2 y 4 válidas con la 3 vacía → `201` con 2 posiciones; fila con solo el ticker → `422`; solo cabeceras o solo filas vacías → `422` "el fichero no contiene posiciones".
 - **TWR:** sesiones de compra, sin flujos y de venta; neutralidad frente a aportaciones (10 + 10 acciones → 21 %); compra en sábado → aportación del lunes y 5 % esa sesión; venta en domingo → retirada del lunes y 1,82 %; no se anualiza un periodo < 365 días; semanas y meses parciales y sin inversión.
@@ -568,6 +569,7 @@ El script `tests/trazabilidad.py` lee `openspec/specs/**/spec.md` y la lista de 
 - la caché evita una segunda llamada al proveedor;
 - con el proveedor caído, `200` si la caché cubre el rango (aunque esté desactualizada) y `503` con `Retry-After` si no lo cubre;
 - la barra del día en curso no se guarda;
+- `GET /api/cartera/ejemplo` → `200` con el tipo y el adjunto `cartera-ejemplo.xlsx`; importarlo → `201` con al menos 8 posiciones, abiertas y cerradas; descargarlo con una cartera de 5 posiciones → siguen las 5; `GET /api/cartera/resumen` sin cartera → `200` con ceros, y con el proveedor caído → `200` con el realizado y el motivo;
 - `GET /api/recomendaciones` con `riesgo` 2 y `antiguedad_max` 5 → `200` con esos valores aplicados; `riesgo` 10 → `400`; `antiguedad_max` −1 → `400`;
 - sin datos del índice de referencia, `GET /api/cartera/rentabilidad/twr` responde `200` con la TWR de la cartera y el motivo "datos del índice de referencia no disponibles", y `POST /api/backtests` responde `200` con la línea base del índice no disponible; `POST /api/backtests` con la estrategia `buy-hold` → `404`.
 
@@ -763,6 +765,9 @@ Ejemplo:
 
 **Fórmulas clave (contrato del dominio)**
 - **Rendimiento:** `(P_ref − P_compra) × cantidad` USD y `(P_ref ÷ P_compra − 1) × 100` %, con `P_ref` el último cierre sin ajustar en las abiertas y el precio de venta en las cerradas. Ejemplo: 2,5 × (120 − 100) = 50 USD.
+- **Resumen de la cartera:** valor actual `Σ cantidad × P_ref` y capital invertido `Σ cantidad × P_compra` de las abiertas con precio; P&L no realizado = valor − invertido (en % sobre el invertido); P&L realizado = suma de los rendimientos de las cerradas. Las abiertas sin precio se excluyen de los tres primeros valores y se cuentan aparte. Ejemplo: 10 `AAPL` 100 → 120 y 5 `MSFT` 200 → 180, y cerradas +150 y −100 → valor 2.100 USD, invertido 2.000 USD, no realizado +100 USD (+5 %), realizado +50 USD.
+- **Ganancias por año fiscal:** cerradas agrupadas por el año natural de su fecha de venta y, en cada año, ganancias, pérdidas y neto por separado en Short-Term y Long-Term, del año más reciente al más antiguo. Ejemplo: en 2024, ST +300 y −100 → neto +200; LT +500 → neto +500. Una compra del 2024-06-01 vendida el 2025-01-05 cuenta en 2025 como Short-Term.
+- **Datos desactualizados:** la cotización más reciente usada tiene más de 5 días naturales respecto a la fecha actual (del 2025-03-07 al 2025-03-10 no; al 2025-03-14 sí).
 - **Días de tenencia:** `fecha_fin − fecha_compra`, donde `fecha_fin` es la venta o la fecha actual.
 - **ST/LT:** Long-Term si `fecha_fin > aniversario(fecha_compra)`. El aniversario es el mismo día y mes del año siguiente, o el 28 de febrero si la compra fue un 29 de febrero. Ejemplos: compra 2024-01-10 → Short-Term si se vende el 2025-01-10 y Long-Term desde el 2025-01-11; compra 2024-02-29 → Long-Term desde el 2025-03-01; compra 2023-02-28 → Long-Term desde el 2024-02-29.
 - **Rentabilidad diaria:** `r_t = (V_t + S_t − V_{t−1} − B_t) ÷ (V_{t−1} + B_t)`, con `V_t` la suma de cantidad × cierre sin ajustar de las abiertas al final de t, `B_t` las compras de t a coste y `S_t` las ventas de t. Las compras cuentan como hechas al inicio de la sesión (denominador) y las ventas al final (solo numerador); se excluyen las sesiones con denominador 0.
@@ -805,6 +810,8 @@ Endpoints del MVP (base `/api`, cartera única sin identificador):
 |---|---|---|
 | POST | `/cartera/importacion` (multipart) | F1 |
 | GET | `/cartera/posiciones` | F1 |
+| GET | `/cartera/resumen` | F1 |
+| GET | `/cartera/ejemplo` (XLSX adjunto) | F1 · S3 |
 | GET | `/cartera/rentabilidad/twr` | F2 |
 | GET | `/estrategias` | F3 |
 | GET | `/estrategias/{id}/senales` | F3 |
@@ -813,8 +820,8 @@ Endpoints del MVP (base `/api`, cartera única sin identificador):
 | GET | `/recomendaciones?estrategia={id}&riesgo={0,1-5}&antiguedad_max={0-250}` | F5 |
 
 Códigos comunes:
-- **`409 Conflict`** si no hay cartera importada, en `GET /cartera/rentabilidad/twr`, `GET /estrategias/{id}/senales`, `POST /backtests` y `GET /recomendaciones`. Sin cartera, `GET /cartera/posiciones` responde `200` con una lista vacía, y `GET /estrategias` (catálogo) no depende de la cartera.
-- **`503 Service Unavailable`** si no se pueden obtener precios del proveedor de mercado y la caché no cubre el rango que necesita la petición, en esos mismos cuatro endpoints y en el histórico de señales (ver "Proveedor de mercado no disponible"). `GET /cartera/posiciones` no responde `503`: degrada por posición y devuelve cada posición abierta sin cotización con precio de referencia y rendimiento vacíos y el motivo, y el resto con normalidad. `GET /estrategias` no usa el proveedor.
+- **`409 Conflict`** si no hay cartera importada, en `GET /cartera/rentabilidad/twr`, `GET /estrategias/{id}/senales`, `POST /backtests` y `GET /recomendaciones`. Sin cartera, `GET /cartera/posiciones` responde `200` con una lista vacía y `GET /cartera/resumen` con importes y recuentos a 0, la lista de años vacía y la fecha de los datos vacía; `GET /cartera/ejemplo` no depende de la cartera, y `GET /estrategias` (catálogo) no depende de la cartera.
+- **`503 Service Unavailable`** si no se pueden obtener precios del proveedor de mercado y la caché no cubre el rango que necesita la petición, en esos mismos cuatro endpoints y en el histórico de señales (ver "Proveedor de mercado no disponible"). `GET /cartera/posiciones` y `GET /cartera/resumen` no responden `503`. El resumen devuelve el P&L realizado, los recuentos y las ganancias por año, y deja vacíos el valor actual, el capital invertido, el P&L no realizado y la fecha de los datos con el motivo "datos de mercado no disponibles". Las posiciones degradan por posición y devuelve cada posición abierta sin cotización con precio de referencia y rendimiento vacíos y el motivo, y el resto con normalidad. `GET /estrategias` no usa el proveedor.
 - **`404 Not Found`** si la estrategia no existe, en señales, backtest y recomendaciones.
 - **`400 Bad Request`** si los parámetros de la estrategia están fuera de rango o son incoherentes, y en general si los parámetros de ruta, de consulta o el cuerpo JSON no superan la validación de tipos, rangos o campos admitidos (por ejemplo, el periodo `abc` o un campo `comision` inexistente). Se responde `400` y no el `422` por defecto de FastAPI; `422` queda reservado para el contenido del fichero importado y los tickers sin histórico.
 
@@ -846,6 +853,32 @@ Las excepciones de dominio se traducen a HTTP en un único manejador: `CarteraNo
 
 - **`422` frente a `503`:** `422` significa que el proveedor respondió y el ticker no tiene histórico; `503`, que no se pudo contactar con el proveedor.
 - **Cuerpo del `503`:** `application/problem+json` con tipo, título y detalle, sin datos internos del proveedor, y cabecera `Retry-After: 60`, que el frontend usa para el botón de reintentar.
+
+**`GET /cartera/resumen`.** Ejemplo de respuesta `200`:
+
+```json
+{
+  "valor_actual": 2100.00,
+  "capital_invertido": 2000.00,
+  "pnl_no_realizado": 100.00,
+  "pnl_no_realizado_pct": 5.00,
+  "pnl_realizado": 50.00,
+  "abiertas": 2,
+  "cerradas": 2,
+  "abiertas_sin_precio": 0,
+  "por_anio": [
+    {
+      "anio": 2024,
+      "short_term": { "ganancias": 300.00, "perdidas": -100.00, "neto": 200.00 },
+      "long_term": { "ganancias": 500.00, "perdidas": 0.00, "neto": 500.00 }
+    }
+  ],
+  "datos_mercado": { "fecha": "2025-03-07T16:00:00-05:00", "desactualizados": false },
+  "motivo": null
+}
+```
+
+**`GET /cartera/ejemplo`** responde `200` con `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet` y `Content-Disposition: attachment; filename="cartera-ejemplo.xlsx"`; siempre es el mismo fichero y descargarlo no modifica la cartera.
 
 **`GET /recomendaciones`: parámetros de riesgo y antigüedad.** `riesgo` es un porcentaje opcional entre 0,1 y 5 (por defecto 1) y `antiguedad_max` un entero opcional entre 0 y 250 (sin él no se filtra por antigüedad); la respuesta indica los valores aplicados. Ejemplo de respuesta con `estrategia=rsi&riesgo=1`:
 
@@ -1169,6 +1202,15 @@ Los criterios de aceptación resumen los escenarios de la spec correspondiente, 
 
 Criterios de aceptación:
 ```gherkin
+Dado que no tengo cartera
+Cuando pulso "Descargar cartera de ejemplo"
+Entonces descargo cartera-ejemplo.xlsx y, al subirlo, se importan al menos 8 posiciones sin errores
+
+Dada una cartera con 10 AAPL compradas a 100 USD con referencia 120 USD, 5 MSFT compradas a 200 USD con referencia 180 USD y cerradas con +150 y −100 USD
+Cuando abro el dashboard
+Entonces la cabecera muestra valor actual 2.100 USD, capital invertido 2.000 USD, P&L no realizado +100 USD (+5 %) y realizado +50 USD
+Y si en 2024 cerré posiciones Short-Term con +300 y −100 USD y una Long-Term con +500 USD, la tabla de 2024 muestra neto +200 USD en Short-Term y +500 USD en Long-Term
+
 Dado un XLSX válido con 3 filas, 2 sin fecha de venta y 1 con fecha y precio de venta
 Cuando lo subo
 Entonces se importan 3 posiciones, 2 abiertas y 1 cerrada

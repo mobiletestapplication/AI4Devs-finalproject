@@ -30,7 +30,7 @@ Un fin de semana largo con festivo supone hasta 4 días sin sesión. Con 5 días
 - **Alternativa descartada:** contar sesiones bursátiles. Requiere un calendario de mercado que el MVP no tiene.
 
 ### D4. XLSX de ejemplo estático versionado en el repositorio
-El fichero se guarda con los fixtures del backend y el endpoint lo sirve tal cual, en modo de solo lectura.
+El fichero se guarda en `backend/app/recursos/cartera-ejemplo.xlsx` (A13 de `revisar-arquitectura-mvp`), que se copia a la imagen, y el endpoint lo sirve tal cual, en modo de solo lectura. No va bajo `tests/`, que no se copia a la imagen.
 - **Alternativa descartada:** generarlo en cada petición con openpyxl. Añade código y una superficie de error sin beneficio, porque el contenido es fijo.
 - **Beneficio:** el mismo fichero alimenta el seed (DB-01) y un test de integración que lo importa y espera `201`, así que cualquier cambio en las reglas de validación que lo rompa falla en CI.
 - **Requisitos del contenido:** tickers estadounidenses líquidos con histórico en el proveedor; fechas fijas en el pasado, con la primera compra más de 400 días antes de la fecha de creación del fichero para que la TWR anualizada sea aplicable; al menos una posición cerrada ST con ganancia, una ST con pérdida y una LT.
@@ -47,7 +47,7 @@ Todos los importes y porcentajes del resumen se calculan con `Decimal` a partir 
 flowchart LR
     POS[Cálculo de posiciones<br/>precio ref · rendimiento · ST/LT] --> RES[Resumen<br/>valor · invertido · P&L · por año fiscal]
     MD[MarketData<br/>fecha cotización] --> RES
-    FIX[(fixtures/cartera-ejemplo.xlsx)] --> EJ[GET /api/cartera/ejemplo]
+    FIX[(app/recursos/cartera-ejemplo.xlsx)] --> EJ[GET /api/cartera/ejemplo]
     FIX --> SEED[Seed DB-01]
     FIX --> TEST[Test de integración<br/>importación 201]
 ```
